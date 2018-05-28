@@ -1,7 +1,7 @@
 package rest
 
 import (
-	"../framework"
+	"github.com/wenlaizhou/framework/framework"
 	"io/ioutil"
 	"net/http"
 	"strings"
