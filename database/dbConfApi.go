@@ -66,7 +66,9 @@ func InitSqlConfApi(filePath string) {
 			//result post variable
 			resultVariables := make([]SqlParam, 0)
 			for _, id := range sqlIds {
-				resultVariableNames := regexp.MustCompile(fmt.Sprintf(resultReg, id)).FindAllStringSubmatch(sqlStr, -1)
+				resultVariableNames := regexp.MustCompile(fmt.Sprintf(resultReg, id)).
+					FindAllStringSubmatch(sqlStr, -1)
+
 				for resList := range resultVariableNames {
 					variableNameQute := resultVariableNames[resList][0]
 					variableName := resultVariableNames[resList][1]
@@ -77,6 +79,7 @@ func InitSqlConfApi(filePath string) {
 					resultVariables = append(resultVariables, *variable)
 					sqlStr = strings.Replace(sqlStr, variableNameQute, "?", 1)
 				}
+
 			}
 
 			postVariables := make([]SqlParam, 0)
@@ -87,12 +90,6 @@ func InitSqlConfApi(filePath string) {
 				variable := new(SqlParam)
 				variable.Name = variableName
 				variable.Type = Post
-				//for _, sqlId := range sqlIds {
-				//	if variableName == fmt.Sprintf("%s.id", sqlId) {
-				//		variable.Type = Result
-				//		break
-				//	}
-				//}
 				postVariables = append(postVariables, *variable)
 				sqlStr = strings.Replace(sqlStr, variableNameQute, "?", 1)
 			}
@@ -101,7 +98,9 @@ func InitSqlConfApi(filePath string) {
 
 			resultReplaceVariables := make([]SqlParam, 0)
 			for _, id := range sqlIds {
-				resultVariableNames := regexp.MustCompile(fmt.Sprintf(resultReplaceReg, id)).FindAllStringSubmatch(sqlStr, -1)
+				resultVariableNames := regexp.MustCompile(fmt.Sprintf(resultReplaceReg, id)).
+					FindAllStringSubmatch(sqlStr, -1)
+
 				for resList := range resultVariableNames {
 					//variableNameQute := resultVariableNames[resList][0]
 					variableName := resultVariableNames[resList][1]
@@ -112,6 +111,7 @@ func InitSqlConfApi(filePath string) {
 					resultReplaceVariables = append(resultReplaceVariables, *variable)
 				}
 			}
+
 			replaceVariables := make([]SqlParam, 0)
 			replaceVariableNames := replaceReg.FindAllStringSubmatch(sqlStr, -1)
 			for resList := range replaceVariableNames {
@@ -154,33 +154,65 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 
 			for _, sqlInstance := range sqlApi.Sqls {
 				realSql := sqlInstance.SqlOrigin
+
+				//1: replace-process
 				for _, rp := range sqlInstance.RParams {
-					if rp.Type == Replace {
+
+					// post-replace
+					if rp.Type == Post {
 						v, ok := jsonData[rp.Name]
 						if !ok {
 							context.ApiResponse(-1,
 								fmt.Sprintf("参数错误, 未包含 %s", rp.Name),
 								nil)
-							return
+							goto writeError
 						}
 						realSql = strings.Replace(realSql,
 							fmt.Sprintf("#{%v}", rp.Name), v.(string), -1)
-					} else if rp.Type == 1 {
-						v, ok := result[rp.Name]
+
+					} else if rp.Type == Result {
+
+						//result-replace
+
+						v, ok := result[rp.Id]
 						if !ok {
 							context.ApiResponse(-1, //todo 整体错误处理
-								fmt.Sprintf("参数错误, 未包含 %s", rp.Name),
+								fmt.Sprintf("参数错误, 未包含 %s", rp.Id),
 								nil)
-							return
+							goto writeError
 						}
 						sqlRes, ok := v.(sql.Result)
 						if ok {
+							id, _ := sqlRes.LastInsertId()
+							realSql = strings.Replace(realSql,
+								fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
+								strconv.FormatInt(id, 10), -1)
 
 						} else {
 							sqlResMap, ok := v.([]map[string]string)
+							if !ok {
+								context.ApiResponse(-1, //todo 整体错误处理
+									fmt.Sprintf("参数错误, 未包含id : %s", rp.Id),
+									nil)
+								goto writeError
+							}
+							if len(sqlResMap) <= 0 {
+								context.ApiResponse(-1, //todo 整体错误处理
+									fmt.Sprintf("参数错误, 没有查询结果 %s.%s", rp.Id, rp.Name),
+									nil)
+								goto writeError
+							}
+							vStr, ok := sqlResMap[0][rp.Name]
+							if !ok {
+								context.ApiResponse(-1, //todo 整体错误处理
+									fmt.Sprintf("参数错误, 未包含列 : %s.%s", rp.Id, rp.Name),
+									nil)
+								goto writeError
+							}
+							realSql = strings.Replace(realSql,
+								fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
+								vStr, -1)
 						}
-						realSql = strings.Replace(realSql,
-							fmt.Sprintf("#{%v}", rp.Name), v.(string), -1)
 					}
 				}
 
@@ -269,8 +301,7 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 			}
 			return
 
-		writeError:
-			context.ApiResponse(-1, "sql执行错误", result)
-			return
+		writeError: //直接返回
+			return //context.ApiResponse(-1, "sql执行错误", result)
 		})
 }
