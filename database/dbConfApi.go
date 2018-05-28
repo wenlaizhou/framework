@@ -26,18 +26,24 @@ type SqlApiSql struct {
 type SqlParam struct {
 	Type int
 	Name string
+	Id   string
 }
 
 const (
-	Post    = 0 //${}
-	Result  = 1 //@{} result结果只能具有id类型
-	Replace = 2 //#{}
+	Post   = 0 //${}
+	Result = 1 //@{} result结果只能具有id类型
+	//Replace = 2 //#{}
 	//guid : {{guid}}
 )
 
-var resultIdReg = regexp.MustCompile("@\\{%s\\.(.*?)\\}")
+//四种类型参数
+//1: post sql参数
+//2: result sql参数
+//3: post replace参数
+//4: result replace参数
 var postReg = regexp.MustCompile("\\$\\{(.*?)\\}")
-var resultReg = regexp.MustCompile("@\\{(.*?)\\}")
+var resultReplaceReg = "#\\{%s\\.(.*?)\\}"
+var resultReg = "$\\{%s\\.(.*?)\\}"
 var replaceReg = regexp.MustCompile("#\\{(.*?)\\}")
 
 func InitSqlConfApi(filePath string) {
@@ -54,6 +60,23 @@ func InitSqlConfApi(filePath string) {
 			oneSql.Id = sqlEle.SelectAttrValue("id", strconv.Itoa(i))
 			sqlIds = append(sqlIds, oneSql.Id)
 			sqlStr := strings.TrimSpace(sqlEle.Text())
+
+			//result post variable
+			resultVariables := make([]SqlParam, 0)
+			for _, id := range sqlIds {
+				resultVariableNames := regexp.MustCompile(fmt.Sprintf(resultReg, id)).FindAllStringSubmatch(sqlStr, -1)
+				for resList := range resultVariableNames {
+					variableNameQute := resultVariableNames[resList][0]
+					variableName := resultVariableNames[resList][1]
+					variable := new(SqlParam)
+					variable.Name = variableName
+					variable.Id = id
+					variable.Type = Result
+					resultVariables = append(resultVariables, *variable)
+					sqlStr = strings.Replace(sqlStr, variableNameQute, "?", 1)
+				}
+			}
+
 			postVariables := make([]SqlParam, 0)
 			postVariableNames := postReg.FindAllStringSubmatch(sqlStr, -1)
 			for resList := range postVariableNames {
@@ -62,16 +85,31 @@ func InitSqlConfApi(filePath string) {
 				variable := new(SqlParam)
 				variable.Name = variableName
 				variable.Type = Post
-				for _, sqlId := range sqlIds {
-					if variableName == fmt.Sprintf("%s.id", sqlId) {
-						variable.Type = Result
-						break
-					}
-				}
+				//for _, sqlId := range sqlIds {
+				//	if variableName == fmt.Sprintf("%s.id", sqlId) {
+				//		variable.Type = Result
+				//		break
+				//	}
+				//}
 				postVariables = append(postVariables, *variable)
 				sqlStr = strings.Replace(sqlStr, variableNameQute, "?", 1)
 			}
-			oneSql.Params = postVariables
+
+			oneSql.Params = append(postVariables, resultVariables...)
+
+			resultReplaceVariables := make([]SqlParam, 0)
+			for _, id := range sqlIds {
+				resultVariableNames := regexp.MustCompile(fmt.Sprintf(resultReplaceReg, id)).FindAllStringSubmatch(sqlStr, -1)
+				for resList := range resultVariableNames {
+					//variableNameQute := resultVariableNames[resList][0]
+					variableName := resultVariableNames[resList][1]
+					variable := new(SqlParam)
+					variable.Name = variableName
+					variable.Id = id
+					variable.Type = Result
+					resultReplaceVariables = append(resultReplaceVariables, *variable)
+				}
+			}
 			replaceVariables := make([]SqlParam, 0)
 			replaceVariableNames := replaceReg.FindAllStringSubmatch(sqlStr, -1)
 			for resList := range replaceVariableNames {
@@ -79,11 +117,11 @@ func InitSqlConfApi(filePath string) {
 				variableName := replaceVariableNames[resList][1]
 				replaceVariables = append(replaceVariables, SqlParam{
 					Name: variableName,
-					Type: Replace,
+					Type: Post,
 				})
 			}
 			oneSql.SqlOrigin = sqlStr
-			oneSql.RParams = replaceVariables
+			oneSql.RParams = append(replaceVariables, resultReplaceVariables...)
 			sqlApi.Sqls = append(sqlApi.Sqls, *oneSql)
 		}
 		initSqlApi(*sqlApi)
@@ -125,18 +163,23 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 						}
 						realSql = strings.Replace(realSql,
 							fmt.Sprintf("#{%v}", rp.Name), v.(string), -1)
+					} else if rp.Type == 1 {
+						v, ok := result[rp.Name]
+						if !ok {
+							context.ApiResponse(-1, //todo 整体错误处理
+								fmt.Sprintf("参数错误, 未包含 %s", rp.Name),
+								nil)
+							return
+						}
+						sqlRes, ok := v.(sql.Result)
+						if ok {
+
+						} else {
+							sqlResMap, ok := v.([]map[string]string)
+						}
+						realSql = strings.Replace(realSql,
+							fmt.Sprintf("#{%v}", rp.Name), v.(string), -1)
 					}
-					//else if rp.Type == 1 {
-					//	v, ok := result[rp.Name]
-					//	if !ok {
-					//		context.ApiResponse(-1,
-					//			fmt.Sprintf("参数错误, 未包含 %s", rp.Name),
-					//			nil)
-					//		return
-					//	}
-					//	realSql = strings.Replace(realSql,
-					//		fmt.Sprintf("#{%v}", rp.Name), v.(string), -1)
-					//}
 				}
 
 				realSql = framework.ReplaceStr(realSql, "{{guid}}", framework.Guid)
@@ -165,7 +208,8 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 								context.ApiResponse(-1, "配置信息错误参数: "+variable.Name, nil)
 								return
 							} else {
-								context.ApiResponse(-1, "改部分功能暂未实现", sqlRes)
+
+								context.ApiResponse(-1, "该部分功能暂未实现", sqlRes)
 							}
 							//args = append(args, sqlRes.LastInsertId())
 						}
