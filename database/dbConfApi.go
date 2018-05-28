@@ -146,6 +146,7 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 				case strings.HasPrefix(upperSql, "SELECT"):
 					var args []interface{}
 					for _, variable := range sqlInstance.Params {
+						variable := variable
 						if variable.Type == Post {
 							param, ok := jsonData[variable.Name]
 							if !ok {
@@ -186,11 +187,19 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 					var args []interface{}
 					for _, variable := range sqlInstance.Params {
 						variable := variable
-						param, ok := jsonData[variable.Name]
-						if !ok {
-							param = nil
+						if variable.Type == Post {
+							param, ok := jsonData[variable.Name]
+							if !ok {
+								param = nil
+							}
+							args = append(args, param)
+						} else if variable.Type == Result {
+							param, ok := result[variable.Name]
+							if !ok {
+								param = nil
+							}
+							args = append(args, param)
 						}
-						args = append(args, param)
 					}
 					res, err := session.Exec(realSql, args...)
 					if !framework.ProcessError(err) {
