@@ -221,6 +221,7 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 						context.ApiResponse(-1, //todo 整体错误处理
 							fmt.Sprintf("参数错误, 未包含id : %s.%s", rp.Id, rp.Name),
 							nil)
+
 						goto writeError
 					}
 				}
