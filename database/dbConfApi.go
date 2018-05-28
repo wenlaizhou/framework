@@ -41,6 +41,8 @@ const (
 //2: result sql参数
 //3: post replace参数
 //4: result replace参数
+//5: guid {{guid}}
+
 var postReg = regexp.MustCompile("\\$\\{(.*?)\\}")
 var resultReplaceReg = "#\\{%s\\.(.*?)\\}"
 var resultReg = "$\\{%s\\.(.*?)\\}"
