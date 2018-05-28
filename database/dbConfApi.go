@@ -169,10 +169,13 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 						}
 						realSql = strings.Replace(realSql,
 							fmt.Sprintf("#{%v}", rp.Name), v.(string), -1)
+						continue
 
 					} else if rp.Type == Result {
 
 						//result-replace
+
+						done := false
 
 						v, ok := result[rp.Id]
 						if !ok {
@@ -187,39 +190,47 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 							realSql = strings.Replace(realSql,
 								fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
 								strconv.FormatInt(id, 10), -1)
+							done = true
+							continue
 
-						} else {
-							sqlResMap, ok := v.([]map[string]string)
-							if !ok {
-								context.ApiResponse(-1, //todo 整体错误处理
-									fmt.Sprintf("参数错误, 未包含id : %s", rp.Id),
-									nil)
-								goto writeError
-							}
+						}
+						sqlResStr, ok := v.(string)
+						if ok {
+							realSql = strings.Replace(realSql,
+								fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
+								sqlResStr, -1)
+							continue
+						}
+
+						sqlResMap, ok := v.([]map[string]string)
+						if ok {
 							if len(sqlResMap) <= 0 {
-								context.ApiResponse(-1, //todo 整体错误处理
+								context.ApiResponse(-1,
 									fmt.Sprintf("参数错误, 没有查询结果 %s.%s", rp.Id, rp.Name),
 									nil)
 								goto writeError
 							}
 							vStr, ok := sqlResMap[0][rp.Name]
-							if !ok {
-								context.ApiResponse(-1, //todo 整体错误处理
-									fmt.Sprintf("参数错误, 未包含列 : %s.%s", rp.Id, rp.Name),
-									nil)
-								goto writeError
+							if ok {
+								realSql = strings.Replace(realSql,
+									fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
+									vStr, -1)
 							}
-							realSql = strings.Replace(realSql,
-								fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
-								vStr, -1)
 						}
+
+						context.ApiResponse(-1, //todo 整体错误处理
+							fmt.Sprintf("参数错误, 未包含id : %s.%s", rp.Id, rp.Name),
+							nil)
+						goto writeError
 					}
 				}
 
 				realSql = framework.ReplaceStr(realSql, "{{guid}}", framework.Guid)
 
 				upperSql := strings.ToUpper(realSql)
+
 				switch {
+
 				case strings.HasPrefix(upperSql, "SELECT"):
 					var args []interface{}
 					for _, variable := range sqlInstance.Params {
@@ -228,10 +239,51 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 							param, ok := jsonData[variable.Name]
 							if !ok {
 								context.ApiResponse(-1, "未包含参数: "+variable.Name, nil)
-								return
+								goto writeError
 							}
 							args = append(args, param)
 						} else if variable.Type == Result {
+
+							v, ok := result[variable.Id]
+							if !ok {
+								context.ApiResponse(-1, //todo 整体错误处理
+									fmt.Sprintf("参数错误, 未包含 %s", variable.Id),
+									nil)
+								goto writeError
+							}
+							sqlRes, ok := v.(sql.Result)
+							if ok {
+								id, _ := sqlRes.LastInsertId()
+								realSql = strings.Replace(realSql,
+									fmt.Sprintf("#{%v.%v}", variable.Id, variable.Name),
+									strconv.FormatInt(id, 10), -1)
+
+							} else {
+								sqlResMap, ok := v.([]map[string]string)
+								if !ok {
+									context.ApiResponse(-1, //todo 整体错误处理
+										fmt.Sprintf("参数错误, 未包含id : %s", rp.Id),
+										nil)
+									goto writeError
+								}
+								if len(sqlResMap) <= 0 {
+									context.ApiResponse(-1, //todo 整体错误处理
+										fmt.Sprintf("参数错误, 没有查询结果 %s.%s", rp.Id, rp.Name),
+										nil)
+									goto writeError
+								}
+								vStr, ok := sqlResMap[0][rp.Name]
+								if !ok {
+									context.ApiResponse(-1, //todo 整体错误处理
+										fmt.Sprintf("参数错误, 未包含列 : %s.%s", rp.Id, rp.Name),
+										nil)
+									goto writeError
+								}
+								realSql = strings.Replace(realSql,
+									fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
+									vStr, -1)
+							}
+
 							param, ok := result[variable.Name]
 							if !ok {
 								context.ApiResponse(-1, "配置信息错误参数: "+variable.Name, nil)
@@ -259,6 +311,7 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 						goto writeError
 					}
 					break
+
 				case strings.HasPrefix(upperSql, "INSERT") ||
 					strings.HasPrefix(upperSql, "DELETE") ||
 					strings.HasPrefix(upperSql, "UPDATE"):
