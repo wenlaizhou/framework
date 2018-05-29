@@ -11,6 +11,7 @@ import (
 )
 
 type SqlApi struct {
+	Result      int
 	Path        string
 	Transaction bool
 	Sqls        []SqlApiSql
@@ -36,6 +37,11 @@ const (
 	Param  = 2
 	//Replace = 2 //#{}
 	//guid : {{guid}}
+)
+
+const (
+	Normal  = 0
+	Combine = 1
 )
 
 //六种类型参数
@@ -175,7 +181,7 @@ func initSqlApi(sqlApi SqlApi) {
 				session.Begin()
 			}
 
-			result := make(map[string]interface{})
+			result := make([]map[string]string, 0)
 
 			for _, sqlInstance := range sqlApi.Sqls {
 				realSql := sqlInstance.SqlOrigin
@@ -335,7 +341,7 @@ func initSqlApi(sqlApi SqlApi) {
 					}
 					res, err := session.QueryString(append([]interface{}{realSql}, args...)...)
 					if !framework.ProcessError(err) {
-						result[sqlInstance.Id] = res
+						result = append(result, res...)
 					} else {
 						if sqlApi.Transaction {
 							framework.ProcessError(session.Rollback())
