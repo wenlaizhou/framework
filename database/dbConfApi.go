@@ -14,6 +14,7 @@ type SqlApi struct {
 	Path        string
 	Transaction bool
 	Sqls        []SqlApiSql
+	Params      map[string]string
 }
 
 type SqlApiSql struct {
@@ -32,6 +33,7 @@ type SqlParam struct {
 const (
 	Post   = 0 //${}
 	Result = 1 //@{} result结果只能具有id类型
+	Param  = 2
 	//Replace = 2 //#{}
 	//guid : {{guid}}
 )
@@ -160,19 +162,20 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 				for _, rp := range sqlInstance.RParams {
 
 					// post-replace
-					if rp.Type == Post {
+					switch {
+					case rp.Type == Post:
 						v, ok := jsonData[rp.Name]
 						if !ok {
 							context.ApiResponse(-1,
 								fmt.Sprintf("参数错误, 未包含 %s", rp.Name),
 								nil)
-							goto writeError
+							return
 						}
 						realSql = strings.Replace(realSql,
 							fmt.Sprintf("#{%v}", rp.Name), v.(string), -1)
 						continue
 
-					} else if rp.Type == Result {
+					case rp.Type == Result:
 
 						//result-replace
 
@@ -181,7 +184,7 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 							context.ApiResponse(-1, //todo 整体错误处理
 								fmt.Sprintf("参数错误, 未包含 %s", rp.Id),
 								nil)
-							goto writeError
+							return
 						}
 						sqlRes, ok := v.(sql.Result)
 						if ok {
@@ -206,7 +209,7 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 								context.ApiResponse(-1,
 									fmt.Sprintf("参数错误, 没有查询结果 %s.%s", rp.Id, rp.Name),
 									nil)
-								goto writeError
+								return
 							}
 							vStr, ok := sqlResMap[0][rp.Name]
 							if ok {
@@ -219,8 +222,20 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 						context.ApiResponse(-1, //todo 整体错误处理
 							fmt.Sprintf("参数错误, 未包含id : %s.%s", rp.Id, rp.Name),
 							nil)
-
-						goto writeError
+						return
+					case rp.Type == Param:
+						v, ok := sqlApi.Params[rp.Id]
+						if !ok {
+							context.ApiResponse(-1, //todo 整体错误处理
+								fmt.Sprintf("参数错误, 未包含配置参数id : %s", rp.Id),
+								nil)
+							return
+						}
+						if v == "{{guid}}" {
+							sqlApi.Params[rp.Id] = framework.Guid()
+						}
+						realSql = strings.Replace(realSql,
+							fmt.Sprintf("#{%v}", rp.Id), sqlApi.Params[rp.Id], -1)
 					}
 				}
 
@@ -234,21 +249,22 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 					var args []interface{}
 					for _, variable := range sqlInstance.Params {
 						variable := variable
-						if variable.Type == Post {
+						switch {
+						case variable.Type == Post:
 							param, ok := jsonData[variable.Name]
 							if !ok {
 								context.ApiResponse(-1, "未包含参数: "+variable.Name, nil)
-								goto writeError
+								return
 							}
 							args = append(args, param)
-						} else if variable.Type == Result {
+						case variable.Type == Result:
 
 							v, ok := result[variable.Id]
 							if !ok {
 								context.ApiResponse(-1, //todo 整体错误处理
 									fmt.Sprintf("参数错误, 未包含 %s", variable.Id),
 									nil)
-								goto writeError
+								return
 							}
 							sqlRes, ok := v.(sql.Result)
 							if ok {
@@ -277,8 +293,21 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 							}
 
 							context.ApiResponse(-1, "配置信息错误参数: "+variable.Name, nil)
-							goto writeError
+							return
 							//args = append(args, sqlRes.LastInsertId())
+
+						case variable.Type == Param:
+							v, ok := sqlApi.Params[variable.Id]
+							if !ok {
+								context.ApiResponse(-1, //todo 整体错误处理
+									fmt.Sprintf("参数错误, 未包含配置参数id : %s", variable.Id),
+									nil)
+								return
+							}
+							if v == "{{guid}}" {
+								sqlApi.Params[variable.Id] = framework.Guid()
+							}
+							args = append(args, sqlApi.Params[variable.Id])
 						}
 
 					}
@@ -289,7 +318,8 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 						if sqlApi.Transaction {
 							framework.ProcessError(session.Rollback())
 						}
-						goto writeError
+						context.ApiResponse(-1, "sql执行错误 : "+realSql, args)
+						return
 					}
 					break
 
@@ -299,19 +329,67 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 					var args []interface{}
 					for _, variable := range sqlInstance.Params {
 						variable := variable
-						if variable.Type == Post {
+
+						switch {
+						case variable.Type == Post:
 							param, ok := jsonData[variable.Name]
 							if !ok {
-								param = nil
+								context.ApiResponse(-1, "未包含参数: "+variable.Name, nil)
+								return
 							}
 							args = append(args, param)
-						} else if variable.Type == Result {
-							param, ok := result[variable.Name]
+						case variable.Type == Result:
+
+							v, ok := result[variable.Id]
 							if !ok {
-								param = nil
+								context.ApiResponse(-1, //todo 整体错误处理
+									fmt.Sprintf("参数错误, 未包含 %s", variable.Id),
+									nil)
+								return
 							}
-							args = append(args, param)
+							sqlRes, ok := v.(sql.Result)
+							if ok {
+								id, _ := sqlRes.LastInsertId()
+								args = append(args, id)
+								continue
+							}
+
+							sqlResMap, ok := v.([]map[string]string)
+							if ok {
+								if len(sqlResMap) <= 0 {
+									args = append(args, "")
+									continue
+								}
+								vStr, ok := sqlResMap[0][variable.Name]
+								if ok {
+									args = append(args, vStr)
+									continue
+								}
+							}
+
+							sqlResStr, ok := v.(string)
+							if ok {
+								args = append(args, sqlResStr)
+								continue
+							}
+
+							context.ApiResponse(-1, "配置信息错误参数: "+variable.Name, nil)
+							return
+							//args = append(args, sqlRes.LastInsertId())
+						case variable.Type == Param:
+							v, ok := sqlApi.Params[variable.Id]
+							if !ok {
+								context.ApiResponse(-1, //todo 整体错误处理
+									fmt.Sprintf("参数错误, 未包含配置参数id : %s", variable.Id),
+									nil)
+								return
+							}
+							if v == "{{guid}}" {
+								sqlApi.Params[variable.Id] = framework.Guid()
+							}
+							args = append(args, sqlApi.Params[variable.Id])
 						}
+
 					}
 					res, err := session.Exec(realSql, args...)
 					if !framework.ProcessError(err) {
@@ -323,7 +401,8 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 						if sqlApi.Transaction {
 							framework.ProcessError(session.Rollback())
 						}
-						goto writeError
+						context.ApiResponse(-1, "sql 执行失败: "+realSql, args)
+						return
 					}
 					break
 				}
@@ -335,7 +414,5 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 			}
 			return
 
-		writeError: //直接返回
-			return
 		})
 }
