@@ -128,7 +128,7 @@ func (this *DbApi) GetStruct() map[string]map[string]string {
 	return res
 }
 
-func (this *DbApi) Insert(tableName string, params map[string]interface{}) (int64, error) {
+func (this *DbApi) Insert(tableName string, params map[string]interface{}) (string, error) {
 	var values []interface{}
 	var id = ""
 	columnsStr := ""
@@ -184,8 +184,15 @@ func (this *DbApi) Insert(tableName string, params map[string]interface{}) (int6
 		valuesStr = fmt.Sprintf("%s, %s", valuesStr, "now()")
 	}
 	sql := fmt.Sprintf("insert into %s (%s) values (%s);", tableMeta.Name, columnsStr, valuesStr)
-	_, err := DbApiInstance.GetEngine().Exec(sql, values...)
-	return 0, err
+	res, err := DbApiInstance.GetEngine().Exec(sql, values...)
+	if len(id) > 0 {
+		return id, err
+	}
+	if err != nil {
+		return "", err
+	}
+	id64, err := res.LastInsertId()
+	return fmt.Sprintf("%d", id64), err
 }
 
 func (this *DbApi) GetMeta(tableName string) core.Table {
