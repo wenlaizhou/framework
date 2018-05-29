@@ -123,6 +123,10 @@ func Exists(fp string) bool {
 	return err == nil || os.IsExist(err)
 }
 
+func Mkdir(path string) {
+	os.Mkdir(path, os.ModePerm)
+}
+
 func WriteBytes(filePath string, b []byte) (int, error) {
 	os.MkdirAll(path.Dir(filePath), os.ModePerm)
 	fw, err := os.Create(filePath)
