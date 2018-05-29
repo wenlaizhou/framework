@@ -59,6 +59,10 @@ func InitSqlConfApi(filePath string) {
 		sqlApi.Transaction = apiEle.SelectAttrValue("transaction", "") == "true"
 		sqlApi.Path = apiEle.SelectAttrValue("path", "")
 		sqlApi.Sqls = make([]SqlApiSql, 0)
+		sqlApi.Params = make(map[string]string)
+		for _, paramEle := range apiEle.FindElements(".//param") {
+			sqlApi.Params[paramEle.SelectAttrValue("key", "")] = paramEle.SelectAttrValue("value", "")
+		}
 		for i, sqlEle := range apiEle.FindElements(".//sql") {
 			oneSql := new(SqlApiSql)
 			oneSql.Id = sqlEle.SelectAttrValue("id", strconv.Itoa(i))
@@ -90,6 +94,14 @@ func InitSqlConfApi(filePath string) {
 				variableNameQute := postVariableNames[resList][0]
 				variableName := postVariableNames[resList][1]
 				variable := new(SqlParam)
+				_, ok := sqlApi.Params[variableName]
+				if ok {
+					variable.Id = variableName
+					variable.Name = sqlApi.Params[variableName]
+					variable.Type = Param
+					sqlStr = strings.Replace(sqlStr, variableNameQute, "?", 1)
+					continue
+				}
 				variable.Name = variableName
 				variable.Type = Post
 				postVariables = append(postVariables, *variable)
@@ -119,6 +131,15 @@ func InitSqlConfApi(filePath string) {
 			for resList := range replaceVariableNames {
 				//variableNameQute := replaceVariableNames[resList][0]
 				variableName := replaceVariableNames[resList][1]
+				_, ok := sqlApi.Params[variableName]
+				if ok {
+					replaceVariables = append(replaceVariables, SqlParam{
+						Name: sqlApi.Params[variableName],
+						Id:   variableName,
+						Type: Param,
+					})
+					continue
+				}
 				replaceVariables = append(replaceVariables, SqlParam{
 					Name: variableName,
 					Type: Post,
