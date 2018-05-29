@@ -22,6 +22,7 @@ type Server struct {
 	pathNodes   []pathProcessor
 	CrossDomain bool
 	status      int
+	filter      []filterProcessor
 	sync.RWMutex
 }
 
@@ -81,6 +82,15 @@ func (this *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	for _, filterNode := range this.filter {
+		if filterNode.pathReg.MatchString(r.RequestURI) {
+			if !filterNode.handler(ctx) {
+				return
+			}
+		}
+	}
+
 	for _, pathNode := range this.pathNodes {
 		if pathNode.pathReg.MatchString(r.RequestURI) {
 			pathParams := pathNode.pathReg.FindAllStringSubmatch(r.RequestURI, 10) //最多10个路径参数
