@@ -128,6 +128,66 @@ func (this *DbApi) GetStruct() map[string]map[string]string {
 	return res
 }
 
+func (this *DbApi) Insert(tableName string, params map[string]interface{}) (int64, error) {
+	var values []interface{}
+	var id = ""
+	columnsStr := ""
+	valuesStr := ""
+	tableMeta := tableMetas[tableName]
+	for k, v := range params {
+		if column := tableMeta.GetColumn(k);
+			column != nil && !column.IsAutoIncrement {
+			if column.Name == "create_time" || column.Name == "update_time" {
+				continue
+			}
+			if len(columnsStr) > 0 {
+				columnsStr = fmt.Sprintf("%s, %s", columnsStr, column.Name)
+			} else {
+				columnsStr = column.Name
+			}
+			if len(valuesStr) > 0 {
+				valuesStr = fmt.Sprintf("%s, ?", valuesStr)
+			} else {
+				valuesStr = "?"
+			}
+			values = append(values, v)
+			continue
+		}
+	}
+	//处理is_delete
+	if isDelete := tableMeta.GetColumn("is_delete"); isDelete != nil {
+		if len(columnsStr) > 0 {
+			columnsStr = fmt.Sprintf("%s, %s", columnsStr, isDelete.Name)
+		} else {
+			columnsStr = isDelete.Name
+		}
+		if len(valuesStr) > 0 {
+			valuesStr = fmt.Sprintf("%s, 0", valuesStr)
+		} else {
+			valuesStr = "0"
+		}
+	}
+	primaryKey := tableMeta.GetColumn(tableMeta.PrimaryKeys[0]) // 限制单一主键
+	//32位guid
+	if primaryKey != nil && !primaryKey.IsAutoIncrement {
+		columnsStr = fmt.Sprintf("%s, %s", columnsStr, primaryKey.Name)
+		valuesStr = fmt.Sprintf("%s, ?", valuesStr)
+		id = framework.Guid()
+		values = append(values, id)
+	}
+	if createColumn := tableMeta.GetColumn("create_time"); createColumn != nil {
+		columnsStr = fmt.Sprintf("%s, %s", columnsStr, createColumn.Name)
+		valuesStr = fmt.Sprintf("%s, %s", valuesStr, "now()")
+	}
+	if updateColumn := tableMeta.GetColumn("update_time"); updateColumn != nil {
+		columnsStr = fmt.Sprintf("%s, %s", columnsStr, updateColumn.Name)
+		valuesStr = fmt.Sprintf("%s, %s", valuesStr, "now()")
+	}
+	sql := fmt.Sprintf("insert into %s (%s) values (%s);", tableMeta.Name, columnsStr, valuesStr)
+	_, err := DbApiInstance.GetEngine().Exec(sql, values...)
+	return 0, err
+}
+
 func (this *DbApi) GetMeta(tableName string) core.Table {
 	return tableMetas[tableName]
 }
