@@ -409,9 +409,8 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 			}
 			if sqlApi.Transaction {
 				framework.ProcessError(session.Commit())
-			} else {
-				context.ApiResponse(0, "", result)
 			}
+			context.ApiResponse(0, "", result)
 			return
 
 		})
