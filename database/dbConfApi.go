@@ -54,8 +54,8 @@ var replaceReg = regexp.MustCompile("#\\{(.*?)\\}")
 func InitSqlConfApi(filePath string) {
 	apiConf := framework.LoadXml(filePath)
 	apiElements := apiConf.FindElements("//sqlApi")
-	sqlIds := make([]string, 0)
 	for _, apiEle := range apiElements {
+		sqlIds := make([]string, 0)
 		sqlApi := new(SqlApi)
 		sqlApi.Transaction = apiEle.SelectAttrValue("transaction", "") == "true"
 		sqlApi.Path = apiEle.SelectAttrValue("path", "")
