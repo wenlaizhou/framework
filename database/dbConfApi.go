@@ -336,6 +336,6 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 			return
 
 		writeError: //直接返回
-			return //context.ApiResponse(-1, "sql执行错误", result)
+			return
 		})
 }
