@@ -38,12 +38,13 @@ const (
 	//guid : {{guid}}
 )
 
-//四种类型参数
+//六种类型参数
 //1: post sql参数
 //2: result sql参数
 //3: post replace参数
 //4: result replace参数
-//5: guid {{guid}}
+//5: param sql参数
+//6: param replace参数
 
 var postReg = regexp.MustCompile("\\$\\{(.*?)\\}")
 var resultReplaceReg = "#\\{%s\\.(.*?)\\}"
@@ -154,7 +155,7 @@ func InitSqlConfApi(filePath string) {
 
 }
 
-func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代码
+func initSqlApi(sqlApi SqlApi) {
 	if len(sqlApi.Path) <= 0 {
 		log.Printf("sqlApi注册失败 : %#v 没有服务路径", sqlApi)
 		return
