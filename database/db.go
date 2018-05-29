@@ -128,6 +128,10 @@ func (this *DbApi) GetStruct() map[string]map[string]string {
 	return res
 }
 
+func (this *DbApi) GetMeta(tableName string) core.Table {
+	return tableMetas[tableName]
+}
+
 func (this *DbApi) GetEngine() *xorm.Engine {
 	return this.orm
 }

@@ -12,6 +12,8 @@ import (
 
 var Tables []*core.Table
 
+var tableMetas map[string]core.Table
+
 var Config framework.Config
 
 var inited = false
@@ -33,6 +35,7 @@ func InitDbApi(conf framework.Config) {
 	for _, tableMeta := range tablesMeta {
 		tableMeta := tableMeta
 		Tables = append(Tables, tableMeta)
+		tableMetas[tableMeta.Name] = *tableMeta
 		registerTableCommonApi(*tableMeta)
 	}
 	registerTables()
