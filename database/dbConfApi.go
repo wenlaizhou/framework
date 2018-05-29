@@ -139,6 +139,7 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 	log.Printf("注册sql api服务: %#v", sqlApi)
 	framework.RegisterHandler(sqlApi.Path,
 		func(context framework.Context) {
+			sqlApi := sqlApi
 			jsonData, err := context.GetJSON()
 			if framework.ProcessError(err) {
 				context.ApiResponse(-1, "参数错误, 非法json数据", nil)
@@ -175,8 +176,6 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 
 						//result-replace
 
-						done := false
-
 						v, ok := result[rp.Id]
 						if !ok {
 							context.ApiResponse(-1, //todo 整体错误处理
@@ -190,7 +189,6 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 							realSql = strings.Replace(realSql,
 								fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
 								strconv.FormatInt(id, 10), -1)
-							done = true
 							continue
 
 						}
@@ -255,49 +253,31 @@ func initSqlApi(sqlApi SqlApi) { //todo sql id 相关配置需要进行细化代
 							sqlRes, ok := v.(sql.Result)
 							if ok {
 								id, _ := sqlRes.LastInsertId()
-								realSql = strings.Replace(realSql,
-									fmt.Sprintf("#{%v.%v}", variable.Id, variable.Name),
-									strconv.FormatInt(id, 10), -1)
+								args = append(args, id)
+								continue
+							}
 
-							} else {
-								sqlResMap, ok := v.([]map[string]string)
-								if !ok {
-									context.ApiResponse(-1, //todo 整体错误处理
-										fmt.Sprintf("参数错误, 未包含id : %s", rp.Id),
-										nil)
-									goto writeError
-								}
+							sqlResMap, ok := v.([]map[string]string)
+							if ok {
 								if len(sqlResMap) <= 0 {
-									context.ApiResponse(-1, //todo 整体错误处理
-										fmt.Sprintf("参数错误, 没有查询结果 %s.%s", rp.Id, rp.Name),
-										nil)
-									goto writeError
+									args = append(args, "")
+									continue
 								}
-								vStr, ok := sqlResMap[0][rp.Name]
-								if !ok {
-									context.ApiResponse(-1, //todo 整体错误处理
-										fmt.Sprintf("参数错误, 未包含列 : %s.%s", rp.Id, rp.Name),
-										nil)
-									goto writeError
+								vStr, ok := sqlResMap[0][variable.Name]
+								if ok {
+									args = append(args, vStr)
+									continue
 								}
-								realSql = strings.Replace(realSql,
-									fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
-									vStr, -1)
 							}
 
-							param, ok := result[variable.Name]
-							if !ok {
-								context.ApiResponse(-1, "配置信息错误参数: "+variable.Name, nil)
-								return
+							sqlResStr, ok := v.(string)
+							if ok {
+								args = append(args, sqlResStr)
+								continue
 							}
-							sqlRes, ok := param.(sql.Result)
-							if !ok {
-								context.ApiResponse(-1, "配置信息错误参数: "+variable.Name, nil)
-								return
-							} else {
 
-								context.ApiResponse(-1, "该部分功能暂未实现", sqlRes)
-							}
+							context.ApiResponse(-1, "配置信息错误参数: "+variable.Name, nil)
+							goto writeError
 							//args = append(args, sqlRes.LastInsertId())
 						}
 
