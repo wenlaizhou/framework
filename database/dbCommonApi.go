@@ -37,7 +37,7 @@ func InitDbApi(conf framework.Config) {
 	}
 	registerTables()
 	if !framework.Exists(conf["logPath"].(string)) {
-		framework.Mkdir(conf["logPath"].string))
+		framework.Mkdir(conf["logPath"].(string))
 	}
 	logPath := fmt.Sprintf("%s/sql.log", conf["logPath"])
 	fs, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND, os.ModePerm)
