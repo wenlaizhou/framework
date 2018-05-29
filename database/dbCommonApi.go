@@ -32,6 +32,8 @@ func InitDbApi(conf framework.Config) {
 		return
 	}
 
+	tableMetas = make(map[string]core.Table)
+
 	for _, tableMeta := range tablesMeta {
 		tableMeta := tableMeta
 		Tables = append(Tables, tableMeta)
