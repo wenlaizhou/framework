@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-xorm/xorm"
 	"github.com/wenlaizhou/framework/framework"
+	"errors"
 )
 
 // 提炼sql语句中的参数
@@ -141,49 +142,29 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 		valuesStr = fmt.Sprintf("%s, %s", valuesStr, "now()")
 	}
 	sql := fmt.Sprintf("insert into %s (%s) values (%s);", tableMeta.Name, columnsStr, valuesStr)
-	res, err := DbApiInstance.GetEngine().Exec(sql, values...)
-	if !framework.ProcessError(err) {
-		//记录日志
-		logSql(logger, context, sql, values)
-		//查询并写入es
-		lastId, err := res.LastInsertId()
-		framework.ProcessError(err)
-		if len(id) > 0 {
-			context.ApiResponse(0, "success", id)
-		} else {
-			context.ApiResponse(0, "success", lastId)
-		}
-	} else {
-		context.ApiResponse(-1, err.Error(), nil)
-	}
+
+	res, err := session.Exec(sql, values...)
+	framework.ProcessError(err)
+	res.RowsAffected()
+	errors.New("")
 }
 
 func doDelete(session xorm.Session, sqlConf SqlConf, requestJson map[string]interface{}, confParams map[string]string) {
 	primaryValue, ok := requestJson["id"]
+	tableMeta := DbApiInstance.GetMeta(sqlConf.Table)
 	if !ok || primaryValue == nil {
-		context.ApiResponse(-1, "删除数据必须指定id值", nil)
 		return
 	}
 	if len(tableMeta.PrimaryKeys) <= 0 {
-		context.ApiResponse(-1, "表不存在主键, 无法删除数据", nil)
 		return
 	}
-	tableMeta := DbApiInstance.GetMeta(sqlConf.Table)
 	primaryKey := tableMeta.PrimaryKeys[0]
 	sql := fmt.Sprintf("delete from %s where %s = ?;", tableMeta.Name, primaryKey)
 	res, err := DbApiInstance.GetEngine().Exec(sql, primaryValue)
+	res.RowsAffected()
+	res.LastInsertId()
 	if !framework.ProcessError(err) {
-		logSql(logger, context, sql, []interface{}{primaryValue})
-		rowsAffected, err := res.RowsAffected()
-		if !framework.ProcessError(err) {
-			context.ApiResponse(0, "success", rowsAffected)
-			return
-		} else {
-			context.ApiResponse(-1, err.Error(), nil)
-		}
-	} else {
-		context.ApiResponse(-1, err.Error(), nil)
-		return
+
 	}
 }
 
@@ -191,12 +172,10 @@ func doUpdate(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 	tableMeta := DbApiInstance.GetMeta(sqlConf.Table)
 	primaryValue, ok := requestJson["id"]
 	if !ok || primaryValue == nil {
-		context.ApiResponse(-1, "删除数据必须指定id值", nil)
 		return
 	}
 	primaryKey := tableMeta.PrimaryKeys[0]
 	if len(tableMeta.PrimaryKeys) <= 0 {
-		context.ApiResponse(-1, "表不存在主键, 无法更新", nil)
 		return
 	}
 	var values []interface{}
@@ -223,18 +202,13 @@ func doUpdate(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 		columnsStr, primaryKey)
 	values = append(values, primaryValue)
 	res, err := DbApiInstance.GetEngine().Exec(sql, values...)
+	res.LastInsertId()
+	res.RowsAffected()
 	if !framework.ProcessError(err) {
-		logSql(logger, context, sql, values)
-		rowsAffected, err := res.RowsAffected()
-		if !framework.ProcessError(err) && rowsAffected == 1 {
-			context.ApiResponse(0, "success", rowsAffected)
-			return
-		}
+		return
 	}
 	if err != nil {
-		context.ApiResponse(-1, err.Error(), nil)
 	}
-	context.ApiResponse(-1, "", nil)
 }
 
 func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]interface{}, confParams map[string]string) {
@@ -287,14 +261,12 @@ func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 	} else {
 		sql = fmt.Sprintf("select * from %s where %s;", tableMeta.Name, columnsStr)
 	}
-	res, err := DbApiInstance.GetEngine().QueryString(append([]interface{}{sql}, values...)...)
+	res, err := session.QueryString(append([]interface{}{sql}, values...)...)
+	println(res)
 	if !framework.ProcessError(err) {
-		logSql(logger, context, sql, values)
 	}
 	if err != nil {
-		context.ApiResponse(-1, err.Error(), nil)
 		return
 	}
-	context.ApiResponse(0, "", res)
 	return
 }
