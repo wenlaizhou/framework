@@ -42,7 +42,9 @@ func parseSql(sql string) (string, []SqlParam, []SqlParam) {
 	return sql, replaceVariables, postVariables
 }
 
-func exec(session xorm.Session, sqlConf SqlConf, requestJson map[string]interface{}, confParams map[string]string) {
+func exec(session xorm.Session, sqlConf SqlConf,
+	requestJson map[string]interface{}, confParams map[string]string) (interface{}, error) {
+
 	variable := make([]interface{}, 0)
 	sql := sqlConf.SqlOrigin
 	for _, p := range sqlConf.RParams {
@@ -79,10 +81,10 @@ func exec(session xorm.Session, sqlConf SqlConf, requestJson map[string]interfac
 		}
 	}
 	if strings.HasPrefix(strings.ToUpper(sql), "SELECT") {
-		session.QueryString(append([]interface{}{sql}, variable...))
+		return session.QueryString(append([]interface{}{sql}, variable...))
 
 	} else {
-		session.Exec(sql, variable...)
+		return session.Exec(sql, variable...)
 	}
 }
 
@@ -108,6 +110,9 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 			} else {
 				valuesStr = "?"
 			}
+			if confValue, ok := confParams[k]; ok {
+				v = confValue
+			}
 			values = append(values, v)
 			continue
 		}
@@ -131,6 +136,9 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 		columnsStr = fmt.Sprintf("%s, %s", columnsStr, primaryKey.Name)
 		valuesStr = fmt.Sprintf("%s, ?", valuesStr)
 		id = framework.Guid()
+		if confValue, ok := confParams[primaryKey.Name]; ok { //id处理器
+			id = confValue
+		}
 		values = append(values, id)
 	}
 	if createColumn := tableMeta.GetColumn("create_time"); createColumn != nil {
