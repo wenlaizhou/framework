@@ -195,6 +195,18 @@ func (this *DbApi) Insert(tableName string, params map[string]interface{}) (stri
 	return fmt.Sprintf("%d", id64), err
 }
 
+func (this *DbApi) Update(session xorm.Session, tableName string, params map[string]interface{}) (string, error) {
+
+}
+
+func (this *DbApi) Select(tableName string, params map[string]interface{}) (string, error) {
+
+}
+
+func (this *DbApi) Delete(tableName string, id string) (error) {
+
+}
+
 func (this *DbApi) GetMeta(tableName string) core.Table {
 	return tableMetas[tableName]
 }

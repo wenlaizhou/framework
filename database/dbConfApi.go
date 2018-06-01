@@ -14,11 +14,13 @@ type SqlApi struct {
 	Result      int
 	Path        string
 	Transaction bool
-	Sqls        []SqlApiSql
+	Sqls        []SqlConf
 	Params      map[string]string
 }
 
-type SqlApiSql struct {
+type SqlConf struct {
+	HasSql    bool
+	Table     string
 	SqlOrigin string
 	RParams   []SqlParam
 	Params    []SqlParam
@@ -26,9 +28,10 @@ type SqlApiSql struct {
 }
 
 type SqlParam struct {
-	Type int
-	Name string
-	Id   string
+	Type  int
+	Key   string
+	Value interface{}
+	//Id   string
 }
 
 const (
@@ -65,13 +68,13 @@ func InitSqlConfApi(filePath string) {
 		sqlApi := new(SqlApi)
 		sqlApi.Transaction = apiEle.SelectAttrValue("transaction", "") == "true"
 		sqlApi.Path = apiEle.SelectAttrValue("path", "")
-		sqlApi.Sqls = make([]SqlApiSql, 0)
+		sqlApi.Sqls = make([]SqlConf, 0)
 		sqlApi.Params = make(map[string]string)
 		for _, paramEle := range apiEle.FindElements(".//param") {
 			sqlApi.Params[paramEle.SelectAttrValue("key", "")] = paramEle.SelectAttrValue("value", "")
 		}
 		for i, sqlEle := range apiEle.FindElements(".//sql") {
-			oneSql := new(SqlApiSql)
+			oneSql := new(SqlConf)
 			oneSql.Id = sqlEle.SelectAttrValue("id", strconv.Itoa(i))
 			sqlIds = append(sqlIds, oneSql.Id)
 			sqlStr := strings.TrimSpace(sqlEle.Text())
