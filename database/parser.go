@@ -16,6 +16,7 @@ import (
 //
 // 3. 暂时不处理结果参数
 func parseSql(sql string) (string, []SqlParam, []SqlParam) {
+
 	postVariables := make([]SqlParam, 0)
 	postVariableNames := postReg.FindAllStringSubmatch(sql, -1)
 	for resList := range postVariableNames {
@@ -88,7 +89,9 @@ func exec(session xorm.Session, sqlConf SqlConf,
 	}
 }
 
-func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]interface{}, confParams map[string]string) {
+func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]interface{},
+	confParams map[string]string) (interface{}, error) {
+
 	var values []interface{}
 	var id = ""
 	columnsStr := ""
@@ -130,12 +133,12 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 			valuesStr = "0"
 		}
 	}
+	id = framework.Guid()
 	primaryKey := tableMeta.GetColumn(tableMeta.PrimaryKeys[0]) // 限制单一主键
 	//32位guid
 	if primaryKey != nil && !primaryKey.IsAutoIncrement {
 		columnsStr = fmt.Sprintf("%s, %s", columnsStr, primaryKey.Name)
 		valuesStr = fmt.Sprintf("%s, ?", valuesStr)
-		id = framework.Guid()
 		if confValue, ok := confParams[primaryKey.Name]; ok { //id处理器
 			id = confValue
 		}
@@ -152,39 +155,53 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 	sql := fmt.Sprintf("insert into %s (%s) values (%s);", tableMeta.Name, columnsStr, valuesStr)
 
 	res, err := session.Exec(sql, values...)
-	framework.ProcessError(err)
+	if framework.ProcessError(err) {
+		return nil, err
+	}
 	res.RowsAffected()
 	errors.New("")
+	if lid, err := res.LastInsertId(); err == nil {
+		return lid, nil
+	}
+	return id, nil
 }
 
-func doDelete(session xorm.Session, sqlConf SqlConf, requestJson map[string]interface{}, confParams map[string]string) {
-	primaryValue, ok := requestJson["id"]
+func doDelete(session xorm.Session, sqlConf SqlConf,
+	requestJson map[string]interface{}) (error) {
+
 	tableMeta := DbApiInstance.GetMeta(sqlConf.Table)
-	if !ok || primaryValue == nil {
-		return
-	}
 	if len(tableMeta.PrimaryKeys) <= 0 {
-		return
+		return errors.New("该表没有主键")
 	}
+	primaryValue, ok := requestJson[tableMeta.PrimaryKeys[0]]
+	if !ok || primaryValue == nil {
+		return errors.New(fmt.Sprintf("参数错误, 没有主键 %s", tableMeta.PrimaryKeys[0]))
+	}
+
 	primaryKey := tableMeta.PrimaryKeys[0]
 	sql := fmt.Sprintf("delete from %s where %s = ?;", tableMeta.Name, primaryKey)
-	res, err := DbApiInstance.GetEngine().Exec(sql, primaryValue)
-	res.RowsAffected()
-	res.LastInsertId()
+	_, err := session.Exec(sql, primaryValue)
 	if !framework.ProcessError(err) {
-
+		return err
+	} else {
+		return nil
 	}
 }
 
-func doUpdate(session xorm.Session, sqlConf SqlConf, requestJson map[string]interface{}, confParams map[string]string) {
+func doUpdate(session xorm.Session, sqlConf SqlConf,
+	requestJson map[string]interface{}) (int64, error) {
+
 	tableMeta := DbApiInstance.GetMeta(sqlConf.Table)
-	primaryValue, ok := requestJson["id"]
-	if !ok || primaryValue == nil {
-		return
+	if len(tableMeta.PrimaryKeys) <= 0 {
+		return -1, errors.New("当前操作只支持有主键的表")
+	}
+	if len(requestJson) <= 1 {
+		return -1, errors.New("参数错误, 数量过少")
 	}
 	primaryKey := tableMeta.PrimaryKeys[0]
-	if len(tableMeta.PrimaryKeys) <= 0 {
-		return
+	primaryValue, ok := requestJson[primaryKey]
+	if !ok || primaryValue == nil {
+		return -1, errors.New(fmt.Sprintf("参数错误, 没有主键 %s", tableMeta.PrimaryKeys[0]))
 	}
 	var values []interface{}
 	columnsStr := ""
@@ -192,6 +209,9 @@ func doUpdate(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 		if column := tableMeta.GetColumn(k);
 			column != nil && !column.IsAutoIncrement {
 			if column.Name == "create_time" || column.Name == "update_time" {
+				continue
+			}
+			if column.Name == primaryKey {
 				continue
 			}
 			if len(columnsStr) > 0 {
@@ -209,20 +229,27 @@ func doUpdate(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 	sql := fmt.Sprintf("update %s set %s where %s = ?;", tableMeta.Name,
 		columnsStr, primaryKey)
 	values = append(values, primaryValue)
-	res, err := DbApiInstance.GetEngine().Exec(sql, values...)
-	res.LastInsertId()
-	res.RowsAffected()
+	res, err := session.Exec(sql, values...)
 	if !framework.ProcessError(err) {
-		return
-	}
-	if err != nil {
+		return -1, err
+	} else {
+		return res.RowsAffected()
 	}
 }
 
-func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]interface{}, confParams map[string]string) {
+func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]interface{},
+	confParams map[string]string) ([]map[string]string, error) {
+
 	tableMeta := DbApiInstance.GetMeta(sqlConf.Table)
+	if len(requestJson) <= 0 && len(confParams) <= 0 {
+		return session.QueryString(fmt.Sprintf("select * from %s", tableMeta.Name), )
+	}
+
 	var values []interface{}
 	columnsStr := ""
+	for k, v := range confParams { //将配置写入到请求参数中
+		requestJson[k] = v
+	}
 	for k, v := range requestJson {
 		if column := tableMeta.GetColumn(k); column != nil && !column.IsAutoIncrement {
 			if len(columnsStr) > 0 {
@@ -270,11 +297,8 @@ func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 		sql = fmt.Sprintf("select * from %s where %s;", tableMeta.Name, columnsStr)
 	}
 	res, err := session.QueryString(append([]interface{}{sql}, values...)...)
-	println(res)
 	if !framework.ProcessError(err) {
+		return res, err
 	}
-	if err != nil {
-		return
-	}
-	return
+	return res, nil
 }
