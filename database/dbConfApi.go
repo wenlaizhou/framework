@@ -20,6 +20,7 @@ type SqlApi struct {
 
 type SqlConf struct {
 	HasSql    bool
+	Type      string
 	Table     string
 	SqlOrigin string
 	RParams   []SqlParam
@@ -40,6 +41,13 @@ const (
 	Param  = 2
 	//Replace = 2 //#{}
 	//guid : {{guid}}
+)
+
+const (
+	Insert = "insert"
+	Select = "select"
+	Update = "update"
+	Delete = "delete"
 )
 
 const (
@@ -75,89 +83,100 @@ func InitSqlConfApi(filePath string) {
 		}
 		for i, sqlEle := range apiEle.FindElements(".//sql") {
 			oneSql := new(SqlConf)
+			oneSql.Table = sqlEle.SelectAttrValue("table", "")
 			oneSql.Id = sqlEle.SelectAttrValue("id", strconv.Itoa(i))
 			sqlIds = append(sqlIds, oneSql.Id)
 			sqlStr := strings.TrimSpace(sqlEle.Text())
-
-			//result post variable
-			resultVariables := make([]SqlParam, 0)
-			for _, id := range sqlIds {
-				resultVariableNames := regexp.MustCompile(fmt.Sprintf(resultReg, id)).
-					FindAllStringSubmatch(sqlStr, -1)
-
-				for resList := range resultVariableNames {
-					variableNameQute := resultVariableNames[resList][0]
-					variableName := resultVariableNames[resList][1]
-					variable := new(SqlParam)
-					variable.Name = variableName
-					variable.Id = id
-					variable.Type = Result
-					resultVariables = append(resultVariables, *variable)
-					sqlStr = strings.Replace(sqlStr, variableNameQute, "?", 1)
+			if len(sqlStr) <= 0 {
+				oneSql.HasSql = false
+				oneSql.Type = sqlEle.SelectAttrValue("type", "")
+				if len(oneSql.Table) <= 0 || len(oneSql.Type) <= 0 {
+					//配置错误
 				}
-
+			} else {
+				//参数计算
+				oneSql.SqlOrigin, oneSql.RParams, oneSql.Params = parseSql(oneSql.SqlOrigin)
 			}
 
-			postVariables := make([]SqlParam, 0)
-			postVariableNames := postReg.FindAllStringSubmatch(sqlStr, -1)
-			for resList := range postVariableNames {
-				variableNameQute := postVariableNames[resList][0]
-				variableName := postVariableNames[resList][1]
-				variable := new(SqlParam)
-				_, ok := sqlApi.Params[variableName]
-				if ok {
-					variable.Id = variableName
-					variable.Name = sqlApi.Params[variableName]
-					variable.Type = Param
-					sqlStr = strings.Replace(sqlStr, variableNameQute, "?", 1)
-					continue
-				}
-				variable.Name = variableName
-				variable.Type = Post
-				postVariables = append(postVariables, *variable)
-				sqlStr = strings.Replace(sqlStr, variableNameQute, "?", 1)
-			}
-
-			oneSql.Params = append(postVariables, resultVariables...)
-
-			resultReplaceVariables := make([]SqlParam, 0)
-			for _, id := range sqlIds {
-				resultVariableNames := regexp.MustCompile(fmt.Sprintf(resultReplaceReg, id)).
-					FindAllStringSubmatch(sqlStr, -1)
-
-				for resList := range resultVariableNames {
-					//variableNameQute := resultVariableNames[resList][0]
-					variableName := resultVariableNames[resList][1]
-					variable := new(SqlParam)
-					variable.Name = variableName
-					variable.Id = id
-					variable.Type = Result
-					resultReplaceVariables = append(resultReplaceVariables, *variable)
-				}
-			}
-
-			replaceVariables := make([]SqlParam, 0)
-			replaceVariableNames := replaceReg.FindAllStringSubmatch(sqlStr, -1)
-			for resList := range replaceVariableNames {
-				//variableNameQute := replaceVariableNames[resList][0]
-				variableName := replaceVariableNames[resList][1]
-				_, ok := sqlApi.Params[variableName]
-				if ok {
-					replaceVariables = append(replaceVariables, SqlParam{
-						Name: sqlApi.Params[variableName],
-						Id:   variableName,
-						Type: Param,
-					})
-					continue
-				}
-				replaceVariables = append(replaceVariables, SqlParam{
-					Name: variableName,
-					Type: Post,
-				})
-			}
-			oneSql.SqlOrigin = sqlStr
-			oneSql.RParams = append(replaceVariables, resultReplaceVariables...)
-			sqlApi.Sqls = append(sqlApi.Sqls, *oneSql)
+			//	//result post variable
+			//	resultVariables := make([]SqlParam, 0)
+			//	for _, id := range sqlIds {
+			//		resultVariableNames := regexp.MustCompile(fmt.Sprintf(resultReg, id)).
+			//			FindAllStringSubmatch(sqlStr, -1)
+			//
+			//		for resList := range resultVariableNames {
+			//			variableNameQute := resultVariableNames[resList][0]
+			//			variableName := resultVariableNames[resList][1]
+			//			variable := new(SqlParam)
+			//			variable.Name = variableName
+			//			variable.Id = id
+			//			variable.Type = Result
+			//			resultVariables = append(resultVariables, *variable)
+			//			sqlStr = strings.Replace(sqlStr, variableNameQute, "?", 1)
+			//		}
+			//
+			//	}
+			//
+			//	postVariables := make([]SqlParam, 0)
+			//	postVariableNames := postReg.FindAllStringSubmatch(sqlStr, -1)
+			//	for resList := range postVariableNames {
+			//		variableNameQute := postVariableNames[resList][0]
+			//		variableName := postVariableNames[resList][1]
+			//		variable := new(SqlParam)
+			//		_, ok := sqlApi.Params[variableName]
+			//		if ok {
+			//			variable.Id = variableName
+			//			variable.Name = sqlApi.Params[variableName]
+			//			variable.Type = Param
+			//			sqlStr = strings.Replace(sqlStr, variableNameQute, "?", 1)
+			//			continue
+			//		}
+			//		variable.Name = variableName
+			//		variable.Type = Post
+			//		postVariables = append(postVariables, *variable)
+			//		sqlStr = strings.Replace(sqlStr, variableNameQute, "?", 1)
+			//	}
+			//
+			//	oneSql.Params = append(postVariables, resultVariables...)
+			//
+			//	resultReplaceVariables := make([]SqlParam, 0)
+			//	for _, id := range sqlIds {
+			//		resultVariableNames := regexp.MustCompile(fmt.Sprintf(resultReplaceReg, id)).
+			//			FindAllStringSubmatch(sqlStr, -1)
+			//
+			//		for resList := range resultVariableNames {
+			//			//variableNameQute := resultVariableNames[resList][0]
+			//			variableName := resultVariableNames[resList][1]
+			//			variable := new(SqlParam)
+			//			variable.Name = variableName
+			//			variable.Id = id
+			//			variable.Type = Result
+			//			resultReplaceVariables = append(resultReplaceVariables, *variable)
+			//		}
+			//	}
+			//
+			//	replaceVariables := make([]SqlParam, 0)
+			//	replaceVariableNames := replaceReg.FindAllStringSubmatch(sqlStr, -1)
+			//	for resList := range replaceVariableNames {
+			//		//variableNameQute := replaceVariableNames[resList][0]
+			//		variableName := replaceVariableNames[resList][1]
+			//		_, ok := sqlApi.Params[variableName]
+			//		if ok {
+			//			replaceVariables = append(replaceVariables, SqlParam{
+			//				Name: sqlApi.Params[variableName],
+			//				Id:   variableName,
+			//				Type: Param,
+			//			})
+			//			continue
+			//		}
+			//		replaceVariables = append(replaceVariables, SqlParam{
+			//			Name: variableName,
+			//			Type: Post,
+			//		})
+			//	}
+			//	oneSql.SqlOrigin = sqlStr
+			//	oneSql.RParams = append(replaceVariables, resultReplaceVariables...)
+			//	sqlApi.Sqls = append(sqlApi.Sqls, *oneSql)
 		}
 		initSqlApi(*sqlApi)
 	}
@@ -193,84 +212,97 @@ func initSqlApi(sqlApi SqlApi) {
 				for _, rp := range sqlInstance.RParams {
 
 					// post-replace
-					switch {
-					case rp.Type == Post:
-						v, ok := jsonData[rp.Name]
-						if !ok {
-							context.ApiResponse(-1,
-								fmt.Sprintf("参数错误, 未包含 %s", rp.Name),
-								nil)
-							return
-						}
-						realSql = strings.Replace(realSql,
-							fmt.Sprintf("#{%v}", rp.Name), v.(string), -1)
-						continue
+					//switch {
+					//case rp.Type == Post:
+					var replaceParamValue interface{}
+					v, ok := sqlApi.Params[rp.Key]
+					if ok {
 
-					case rp.Type == Result:
-
-						//result-replace
-
-						v, ok := result[rp.Id]
-						if !ok {
-							context.ApiResponse(-1, //todo 整体错误处理
-								fmt.Sprintf("参数错误, 未包含 %s", rp.Id),
-								nil)
-							return
-						}
-						sqlRes, ok := v.(sql.Result)
-						if ok {
-							id, _ := sqlRes.LastInsertId()
-							realSql = strings.Replace(realSql,
-								fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
-								strconv.FormatInt(id, 10), -1)
-							continue
-
-						}
-						sqlResStr, ok := v.(string)
-						if ok {
-							realSql = strings.Replace(realSql,
-								fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
-								sqlResStr, -1)
-							continue
-						}
-
-						sqlResMap, ok := v.([]map[string]string)
-						if ok {
-							if len(sqlResMap) <= 0 {
-								context.ApiResponse(-1,
-									fmt.Sprintf("参数错误, 没有查询结果 %s.%s", rp.Id, rp.Name),
-									nil)
-								return
-							}
-							vStr, ok := sqlResMap[0][rp.Name]
-							if ok {
-								realSql = strings.Replace(realSql,
-									fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
-									vStr, -1)
-							}
-						}
-
-						context.ApiResponse(-1, //todo 整体错误处理
-							fmt.Sprintf("参数错误, 未包含id : %s.%s", rp.Id, rp.Name),
-							nil)
-						return
-					case rp.Type == Param:
-						v, ok := sqlApi.Params[rp.Id]
-						if !ok {
-							context.ApiResponse(-1, //todo 整体错误处理
-								fmt.Sprintf("参数错误, 未包含配置参数id : %s", rp.Id),
-								nil)
-							return
-						}
 						if v == "{{guid}}" {
-							sqlApi.Params[rp.Id] = framework.Guid()
+							sqlApi.Params[rp.Key] = framework.Guid()
 						}
-						realSql = strings.Replace(realSql,
-							fmt.Sprintf("#{%v}", rp.Id), sqlApi.Params[rp.Id], -1)
+
+						replaceParamValue = v
+
+					} else {
+						if vI, ok := jsonData[rp.Key]; ok {
+							replaceParamValue = vI
+						} else {
+							context.ApiResponse(-1,
+								fmt.Sprintf("参数错误, 未包含 %s", rp.Key),
+								nil)
+							return
+						}
 					}
+					realSql = strings.Replace(realSql,
+						fmt.Sprintf("#{%v}", rp.Key), replaceParamValue.(string), -1)
+					continue
+
+					//case rp.Type == Result:
+					//
+					//	//result-replace
+					//
+					//	v, ok := result[rp.Id]
+					//	if !ok {
+					//		context.ApiResponse(-1, //todo 整体错误处理
+					//			fmt.Sprintf("参数错误, 未包含 %s", rp.Id),
+					//			nil)
+					//		return
+					//	}
+					//	sqlRes, ok := v.(sql.Result)
+					//	if ok {
+					//		id, _ := sqlRes.LastInsertId()
+					//		realSql = strings.Replace(realSql,
+					//			fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
+					//			strconv.FormatInt(id, 10), -1)
+					//		continue
+					//
+					//	}
+					//	sqlResStr, ok := v.(string)
+					//	if ok {
+					//		realSql = strings.Replace(realSql,
+					//			fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
+					//			sqlResStr, -1)
+					//		continue
+					//	}
+					//
+					//	sqlResMap, ok := v.([]map[string]string)
+					//	if ok {
+					//		if len(sqlResMap) <= 0 {
+					//			context.ApiResponse(-1,
+					//				fmt.Sprintf("参数错误, 没有查询结果 %s.%s", rp.Id, rp.Name),
+					//				nil)
+					//			return
+					//		}
+					//		vStr, ok := sqlResMap[0][rp.Name]
+					//		if ok {
+					//			realSql = strings.Replace(realSql,
+					//				fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
+					//				vStr, -1)
+					//		}
+					//	}
+					//
+					//	context.ApiResponse(-1, //todo 整体错误处理
+					//		fmt.Sprintf("参数错误, 未包含id : %s.%s", rp.Id, rp.Name),
+					//		nil)
+					//	return
+					//case rp.Type == Param:
+					//	v, ok := sqlApi.Params[rp.Id]
+					//	if !ok {
+					//		context.ApiResponse(-1, //todo 整体错误处理
+					//			fmt.Sprintf("参数错误, 未包含配置参数id : %s", rp.Id),
+					//			nil)
+					//		return
+					//	}
+					//	if v == "{{guid}}" {
+					//		sqlApi.Params[rp.Id] = framework.Guid()
+					//	}
+					//	realSql = strings.Replace(realSql,
+					//		fmt.Sprintf("#{%v}", rp.Id), sqlApi.Params[rp.Id], -1)
+					//}
 				}
 
-				realSql = framework.ReplaceStr(realSql, "{{guid}}", framework.Guid)
+				//realSql = framework.ReplaceStr(realSql, "{{guid}}", framework.Guid)
 
 				upperSql := strings.ToUpper(realSql)
 
