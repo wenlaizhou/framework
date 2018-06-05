@@ -90,93 +90,13 @@ func InitSqlConfApi(filePath string) {
 			if len(sqlStr) <= 0 {
 				oneSql.HasSql = false
 				oneSql.Type = sqlEle.SelectAttrValue("type", "")
-				if len(oneSql.Table) <= 0 || len(oneSql.Type) <= 0 {
+				if !oneSql.HasSql && len(oneSql.Type) <= 0 {
 					//配置错误
 				}
 			} else {
 				//参数计算
 				oneSql.SqlOrigin, oneSql.RParams, oneSql.Params = parseSql(oneSql.SqlOrigin)
 			}
-
-			//	//result post variable
-			//	resultVariables := make([]SqlParam, 0)
-			//	for _, id := range sqlIds {
-			//		resultVariableNames := regexp.MustCompile(fmt.Sprintf(resultReg, id)).
-			//			FindAllStringSubmatch(sqlStr, -1)
-			//
-			//		for resList := range resultVariableNames {
-			//			variableNameQute := resultVariableNames[resList][0]
-			//			variableName := resultVariableNames[resList][1]
-			//			variable := new(SqlParam)
-			//			variable.Name = variableName
-			//			variable.Id = id
-			//			variable.Type = Result
-			//			resultVariables = append(resultVariables, *variable)
-			//			sqlStr = strings.Replace(sqlStr, variableNameQute, "?", 1)
-			//		}
-			//
-			//	}
-			//
-			//	postVariables := make([]SqlParam, 0)
-			//	postVariableNames := postReg.FindAllStringSubmatch(sqlStr, -1)
-			//	for resList := range postVariableNames {
-			//		variableNameQute := postVariableNames[resList][0]
-			//		variableName := postVariableNames[resList][1]
-			//		variable := new(SqlParam)
-			//		_, ok := sqlApi.Params[variableName]
-			//		if ok {
-			//			variable.Id = variableName
-			//			variable.Name = sqlApi.Params[variableName]
-			//			variable.Type = Param
-			//			sqlStr = strings.Replace(sqlStr, variableNameQute, "?", 1)
-			//			continue
-			//		}
-			//		variable.Name = variableName
-			//		variable.Type = Post
-			//		postVariables = append(postVariables, *variable)
-			//		sqlStr = strings.Replace(sqlStr, variableNameQute, "?", 1)
-			//	}
-			//
-			//	oneSql.Params = append(postVariables, resultVariables...)
-			//
-			//	resultReplaceVariables := make([]SqlParam, 0)
-			//	for _, id := range sqlIds {
-			//		resultVariableNames := regexp.MustCompile(fmt.Sprintf(resultReplaceReg, id)).
-			//			FindAllStringSubmatch(sqlStr, -1)
-			//
-			//		for resList := range resultVariableNames {
-			//			//variableNameQute := resultVariableNames[resList][0]
-			//			variableName := resultVariableNames[resList][1]
-			//			variable := new(SqlParam)
-			//			variable.Name = variableName
-			//			variable.Id = id
-			//			variable.Type = Result
-			//			resultReplaceVariables = append(resultReplaceVariables, *variable)
-			//		}
-			//	}
-			//
-			//	replaceVariables := make([]SqlParam, 0)
-			//	replaceVariableNames := replaceReg.FindAllStringSubmatch(sqlStr, -1)
-			//	for resList := range replaceVariableNames {
-			//		//variableNameQute := replaceVariableNames[resList][0]
-			//		variableName := replaceVariableNames[resList][1]
-			//		_, ok := sqlApi.Params[variableName]
-			//		if ok {
-			//			replaceVariables = append(replaceVariables, SqlParam{
-			//				Name: sqlApi.Params[variableName],
-			//				Id:   variableName,
-			//				Type: Param,
-			//			})
-			//			continue
-			//		}
-			//		replaceVariables = append(replaceVariables, SqlParam{
-			//			Name: variableName,
-			//			Type: Post,
-			//		})
-			//	}
-			//	oneSql.SqlOrigin = sqlStr
-			//	oneSql.RParams = append(replaceVariables, resultReplaceVariables...)
-			//	sqlApi.Sqls = append(sqlApi.Sqls, *oneSql)
 		}
 		initSqlApi(*sqlApi)
 	}
