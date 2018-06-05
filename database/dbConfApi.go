@@ -92,6 +92,7 @@ func InitSqlConfApi(filePath string) {
 					//配置错误
 				}
 			} else {
+				oneSql.HasSql = true
 				//参数计算
 				oneSql.SqlOrigin, oneSql.RParams, oneSql.Params = parseSql(oneSql.SqlOrigin)
 			}
