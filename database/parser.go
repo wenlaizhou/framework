@@ -82,7 +82,7 @@ func exec(session xorm.Session, sqlConf SqlConf,
 		}
 	}
 	if strings.HasPrefix(strings.ToUpper(sql), "SELECT") {
-		return session.QueryString(append([]interface{}{sql}, variable...))
+		return session.QueryString(append([]interface{}{sql}, variable...)...)
 
 	} else {
 		return session.Exec(sql, variable...)
