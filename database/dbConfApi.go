@@ -118,8 +118,7 @@ func initSqlApi(sqlApi SqlApi) {
 			}
 			jsonData, err := context.GetJSON()
 			if framework.ProcessError(err) {
-				context.ApiResponse(-1, "参数错误, 非法json数据", nil)
-				return
+				jsonData = make(map[string]interface{})
 			}
 			session := DbApiInstance.GetEngine().NewSession()
 			defer session.Close()
