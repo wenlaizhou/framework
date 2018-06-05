@@ -117,7 +117,7 @@ func initSqlApi(sqlApi SqlApi) {
 				}
 			}
 			jsonData, err := context.GetJSON()
-			if framework.ProcessError(err) {
+			if err != nil {
 				jsonData = make(map[string]interface{})
 			}
 			session := DbApiInstance.GetEngine().NewSession()
