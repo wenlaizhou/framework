@@ -54,7 +54,12 @@ func exec(session xorm.Session, sqlConf SqlConf,
 		switch p.Type {
 		case Post:
 			if confValue, ok := confParams[p.Key]; ok {
-				rp.Value = confValue
+				if postReg.MatchString(confValue) {
+					confMatch := postReg.FindAllStringSubmatch(confValue, -1)
+					rp.Value = confParams[confMatch[0][1]]
+				} else {
+					rp.Value = confValue
+				}
 			} else {
 				if reqValue, ok := requestJson[p.Key]; ok {
 					rp.Value = fmt.Sprintf("%v", reqValue)
@@ -114,7 +119,12 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 				valuesStr = "?"
 			}
 			if confValue, ok := confParams[k]; ok {
-				v = confValue
+				if postReg.MatchString(confValue) {
+					confMatch := postReg.FindAllStringSubmatch(confValue, -1)
+					v = confParams[confMatch[0][1]]
+				} else {
+					v = confValue
+				}
 			}
 			values = append(values, v)
 			continue
@@ -140,7 +150,12 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 		columnsStr = fmt.Sprintf("%s, %s", columnsStr, primaryKey.Name)
 		valuesStr = fmt.Sprintf("%s, ?", valuesStr)
 		if confValue, ok := confParams[primaryKey.Name]; ok { //id处理器
-			id = confValue
+			if postReg.MatchString(confValue) {
+				confMatch := postReg.FindAllStringSubmatch(confValue, -1)
+				id = confParams[confMatch[0][1]]
+			} else {
+				id = confValue
+			}
 		}
 		values = append(values, id)
 	}
@@ -248,7 +263,12 @@ func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 	var values []interface{}
 	columnsStr := ""
 	for k, v := range confParams { //将配置写入到请求参数中
-		requestJson[k] = v
+		if postReg.MatchString(v) {
+			confMatch := postReg.FindAllStringSubmatch(v, -1)
+			requestJson[k] = confParams[confMatch[0][1]]
+		} else {
+			requestJson[k] = v
+		}
 	}
 	for k, v := range requestJson {
 		if column := tableMeta.GetColumn(k); column != nil && !column.IsAutoIncrement {
