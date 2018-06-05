@@ -95,6 +95,7 @@ func InitSqlConfApi(filePath string) {
 				//参数计算
 				oneSql.SqlOrigin, oneSql.RParams, oneSql.Params = parseSql(oneSql.SqlOrigin)
 			}
+			sqlApi.Sqls = append(sqlApi.Sqls, *oneSql)
 		}
 		initSqlApi(*sqlApi)
 	}
