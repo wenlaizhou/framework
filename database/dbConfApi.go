@@ -3,11 +3,9 @@ package database
 import (
 	"github.com/wenlaizhou/framework/framework"
 	"strings"
-	"fmt"
 	"regexp"
 	"strconv"
 	"log"
-	"database/sql"
 )
 
 type SqlApi struct {
@@ -112,6 +110,12 @@ func initSqlApi(sqlApi SqlApi) {
 	framework.RegisterHandler(sqlApi.Path,
 		func(context framework.Context) {
 			sqlApi := sqlApi
+			//处理guid
+			for k, v := range sqlApi.Params {
+				if v == "{{guid}}" {
+					sqlApi.Params[k] = framework.Guid()
+				}
+			}
 			jsonData, err := context.GetJSON()
 			if framework.ProcessError(err) {
 				context.ApiResponse(-1, "参数错误, 非法json数据", nil)
@@ -126,270 +130,56 @@ func initSqlApi(sqlApi SqlApi) {
 			result := make([]map[string]string, 0)
 
 			for _, sqlInstance := range sqlApi.Sqls {
-				realSql := sqlInstance.SqlOrigin
-
-				//1: replace-process
-				for _, rp := range sqlInstance.RParams {
-
-					// post-replace
-					//switch {
-					//case rp.Type == Post:
-					var replaceParamValue interface{}
-					v, ok := sqlApi.Params[rp.Key]
-					if ok {
-
-						if v == "{{guid}}" {
-							sqlApi.Params[rp.Key] = framework.Guid()
-						}
-
-						replaceParamValue = v
-
-					} else {
-						if vI, ok := jsonData[rp.Key]; ok {
-							replaceParamValue = vI
-						} else {
-							context.ApiResponse(-1,
-								fmt.Sprintf("参数错误, 未包含 %s", rp.Key),
-								nil)
-							return
-						}
-					}
-					realSql = strings.Replace(realSql,
-						fmt.Sprintf("#{%v}", rp.Key), replaceParamValue.(string), -1)
-					continue
-
-					//case rp.Type == Result:
-					//
-					//	//result-replace
-					//
-					//	v, ok := result[rp.Id]
-					//	if !ok {
-					//		context.ApiResponse(-1, //todo 整体错误处理
-					//			fmt.Sprintf("参数错误, 未包含 %s", rp.Id),
-					//			nil)
-					//		return
-					//	}
-					//	sqlRes, ok := v.(sql.Result)
-					//	if ok {
-					//		id, _ := sqlRes.LastInsertId()
-					//		realSql = strings.Replace(realSql,
-					//			fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
-					//			strconv.FormatInt(id, 10), -1)
-					//		continue
-					//
-					//	}
-					//	sqlResStr, ok := v.(string)
-					//	if ok {
-					//		realSql = strings.Replace(realSql,
-					//			fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
-					//			sqlResStr, -1)
-					//		continue
-					//	}
-					//
-					//	sqlResMap, ok := v.([]map[string]string)
-					//	if ok {
-					//		if len(sqlResMap) <= 0 {
-					//			context.ApiResponse(-1,
-					//				fmt.Sprintf("参数错误, 没有查询结果 %s.%s", rp.Id, rp.Name),
-					//				nil)
-					//			return
-					//		}
-					//		vStr, ok := sqlResMap[0][rp.Name]
-					//		if ok {
-					//			realSql = strings.Replace(realSql,
-					//				fmt.Sprintf("#{%v.%v}", rp.Id, rp.Name),
-					//				vStr, -1)
-					//		}
-					//	}
-					//
-					//	context.ApiResponse(-1, //todo 整体错误处理
-					//		fmt.Sprintf("参数错误, 未包含id : %s.%s", rp.Id, rp.Name),
-					//		nil)
-					//	return
-					//case rp.Type == Param:
-					//	v, ok := sqlApi.Params[rp.Id]
-					//	if !ok {
-					//		context.ApiResponse(-1, //todo 整体错误处理
-					//			fmt.Sprintf("参数错误, 未包含配置参数id : %s", rp.Id),
-					//			nil)
-					//		return
-					//	}
-					//	if v == "{{guid}}" {
-					//		sqlApi.Params[rp.Id] = framework.Guid()
-					//	}
-					//	realSql = strings.Replace(realSql,
-					//		fmt.Sprintf("#{%v}", rp.Id), sqlApi.Params[rp.Id], -1)
-					//}
-				}
-
-				//realSql = framework.ReplaceStr(realSql, "{{guid}}", framework.Guid)
-
-				upperSql := strings.ToUpper(realSql)
-
-				switch {
-
-				case strings.HasPrefix(upperSql, "SELECT"):
-					var args []interface{}
-					for _, variable := range sqlInstance.Params {
-						variable := variable
-						switch {
-						case variable.Type == Post:
-							param, ok := jsonData[variable.Name]
-							if !ok {
-								context.ApiResponse(-1, "未包含参数: "+variable.Name, nil)
-								return
-							}
-							args = append(args, param)
-						case variable.Type == Result:
-
-							v, ok := result[variable.Id]
-							if !ok {
-								context.ApiResponse(-1, //todo 整体错误处理
-									fmt.Sprintf("参数错误, 未包含 %s", variable.Id),
-									nil)
-								return
-							}
-							sqlRes, ok := v.(sql.Result)
-							if ok {
-								id, _ := sqlRes.LastInsertId()
-								args = append(args, id)
-								continue
-							}
-
-							sqlResMap, ok := v.([]map[string]string)
-							if ok {
-								if len(sqlResMap) <= 0 {
-									args = append(args, "")
-									continue
-								}
-								vStr, ok := sqlResMap[0][variable.Name]
-								if ok {
-									args = append(args, vStr)
-									continue
-								}
-							}
-
-							sqlResStr, ok := v.(string)
-							if ok {
-								args = append(args, sqlResStr)
-								continue
-							}
-
-							context.ApiResponse(-1, "配置信息错误参数: "+variable.Name, nil)
-							return
-							//args = append(args, sqlRes.LastInsertId())
-
-						case variable.Type == Param:
-							v, ok := sqlApi.Params[variable.Id]
-							if !ok {
-								context.ApiResponse(-1, //todo 整体错误处理
-									fmt.Sprintf("参数错误, 未包含配置参数id : %s", variable.Id),
-									nil)
-								return
-							}
-							if v == "{{guid}}" {
-								sqlApi.Params[variable.Id] = framework.Guid()
-							}
-							args = append(args, sqlApi.Params[variable.Id])
-						}
-
-					}
-					res, err := session.QueryString(append([]interface{}{realSql}, args...)...)
-					if !framework.ProcessError(err) {
-						result = append(result, res...)
-					} else {
-						if sqlApi.Transaction {
-							framework.ProcessError(session.Rollback())
-						}
-						context.ApiResponse(-1, "sql执行错误 : "+realSql, args)
+				if sqlInstance.HasSql {
+					oneSqlRes, err := exec(*session, sqlInstance, jsonData, sqlApi.Params)
+					if err != nil {
+						framework.ProcessError(session.Rollback())
+						context.ApiResponse(-1, err.Error(), nil)
 						return
 					}
-					break
-
-				case strings.HasPrefix(upperSql, "INSERT") ||
-					strings.HasPrefix(upperSql, "DELETE") ||
-					strings.HasPrefix(upperSql, "UPDATE"):
-					var args []interface{}
-					for _, variable := range sqlInstance.Params {
-						variable := variable
-
-						switch {
-						case variable.Type == Post:
-							param, ok := jsonData[variable.Name]
-							if !ok {
-								context.ApiResponse(-1, "未包含参数: "+variable.Name, nil)
-								return
-							}
-							args = append(args, param)
-						case variable.Type == Result:
-
-							v, ok := result[variable.Id]
-							if !ok {
-								context.ApiResponse(-1, //todo 整体错误处理
-									fmt.Sprintf("参数错误, 未包含 %s", variable.Id),
-									nil)
-								return
-							}
-							sqlRes, ok := v.(sql.Result)
-							if ok {
-								id, _ := sqlRes.LastInsertId()
-								args = append(args, id)
-								continue
-							}
-
-							sqlResMap, ok := v.([]map[string]string)
-							if ok {
-								if len(sqlResMap) <= 0 {
-									args = append(args, "")
-									continue
-								}
-								vStr, ok := sqlResMap[0][variable.Name]
-								if ok {
-									args = append(args, vStr)
-									continue
-								}
-							}
-
-							sqlResStr, ok := v.(string)
-							if ok {
-								args = append(args, sqlResStr)
-								continue
-							}
-
-							context.ApiResponse(-1, "配置信息错误参数: "+variable.Name, nil)
-							return
-							//args = append(args, sqlRes.LastInsertId())
-						case variable.Type == Param:
-							v, ok := sqlApi.Params[variable.Id]
-							if !ok {
-								context.ApiResponse(-1, //todo 整体错误处理
-									fmt.Sprintf("参数错误, 未包含配置参数id : %s", variable.Id),
-									nil)
-								return
-							}
-							if v == "{{guid}}" {
-								sqlApi.Params[variable.Id] = framework.Guid()
-							}
-							args = append(args, sqlApi.Params[variable.Id])
-						}
-
+					if a, b := oneSqlRes.([]map[string]string); b {
+						result = append(result, a...)
 					}
-					res, err := session.Exec(realSql, args...)
-					if !framework.ProcessError(err) {
-						if res != nil {
-							framework.ProcessError(err)
-							result[sqlInstance.Id] = res
-						}
-					} else {
-						if sqlApi.Transaction {
+				} else {
+					switch {
+					case "insert" == sqlInstance.Type:
+						_, err := doInsert(*session, sqlInstance, jsonData, sqlApi.Params)
+						if err != nil {
 							framework.ProcessError(session.Rollback())
+							context.ApiResponse(-1, err.Error(), nil)
+							return
 						}
-						context.ApiResponse(-1, "sql 执行失败: "+realSql, args)
-						return
+						break
+					case "select" == sqlInstance.Type:
+						oneSqlRes, err := doSelect(*session, sqlInstance, jsonData, sqlApi.Params)
+						if err != nil {
+							framework.ProcessError(session.Rollback())
+							context.ApiResponse(-1, err.Error(), nil)
+							return
+						}
+						result = append(result, oneSqlRes...)
+						break
+					case "update" == sqlInstance.Type:
+						_, err := doUpdate(*session, sqlInstance, jsonData)
+						if err != nil {
+							framework.ProcessError(session.Rollback())
+							context.ApiResponse(-1, err.Error(), nil)
+							return
+						}
+						break
+					case "delete" == sqlInstance.Type:
+						err := doDelete(*session, sqlInstance, jsonData)
+						if err != nil {
+							framework.ProcessError(session.Rollback())
+							context.ApiResponse(-1, err.Error(), nil)
+							return
+						}
+						break
 					}
-					break
 				}
 			}
+			result = append(result, sqlApi.Params)
+
 			if sqlApi.Transaction {
 				framework.ProcessError(session.Commit())
 			}
