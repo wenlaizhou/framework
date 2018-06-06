@@ -98,6 +98,7 @@ func InitSqlConfApi(filePath string) {
 			}
 			sqlApi.Sqls = append(sqlApi.Sqls, *oneSql)
 		}
+		//注册每个配置对应的接口服务
 		initSqlApi(*sqlApi)
 	}
 
