@@ -196,7 +196,9 @@ func initSqlApi(sqlApi SqlApi) {
 					}
 				}
 			}
-			result = append(result, sqlApi.Params)
+			if len(sqlApi.Params) > 0 {
+				result = append(result, sqlApi.Params)
+			}
 
 			if sqlApi.Transaction {
 				framework.ProcessError(session.Commit())
