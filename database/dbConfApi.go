@@ -143,6 +143,19 @@ func initSqlApi(sqlApi SqlApi) {
 						result = append(result, a...)
 					}
 				} else {
+
+					//table 中含有参数类型数据, 进行处理
+					if postReg.MatchString(sqlInstance.Table) {
+						tableParam := postReg.FindAllStringSubmatch(sqlInstance.Table, -1)
+						tableParamName := tableParam[0][1]
+						if _, ok := jsonData[tableParamName]; ok {
+							sqlInstance.Table = jsonData[tableParamName].(string)
+						}
+						if _, ok := sqlApi.Params[tableParamName]; ok {
+							sqlInstance.Table = sqlApi.Params[tableParamName]
+						}
+					}
+
 					switch {
 					case "insert" == sqlInstance.Type:
 						_, err := doInsert(*session, sqlInstance, jsonData, sqlApi.Params)
