@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"log"
+	"fmt"
 )
 
 type SqlApi struct {
@@ -158,12 +159,14 @@ func initSqlApi(sqlApi SqlApi) {
 
 					switch {
 					case "insert" == sqlInstance.Type:
-						_, err := doInsert(*session, sqlInstance, jsonData, sqlApi.Params)
+						id, err := doInsert(*session, sqlInstance, jsonData, sqlApi.Params)
 						if err != nil {
 							framework.ProcessError(session.Rollback())
 							context.ApiResponse(-1, err.Error(), nil)
 							return
 						}
+						//增加id配置处理
+						sqlApi.Params[fmt.Sprintf("%s.id", sqlInstance.Id)] = fmt.Sprintf("%v", id)
 						break
 					case "select" == sqlInstance.Type:
 						oneSqlRes, err := doSelect(*session, sqlInstance, jsonData, sqlApi.Params)
