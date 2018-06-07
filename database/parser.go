@@ -154,22 +154,25 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 		}
 	}
 
-	primaryKey := tableMeta.GetColumn(tableMeta.PrimaryKeys[0]) // 限制单一主键
-	//32位guid
-	if primaryKey != nil && !primaryKey.IsAutoIncrement {
-		id = framework.Guid()
-		columnsStr = appendColumnStr(columnsStr, primaryKey.Name)
-		valuesStr = appendValueStr(valuesStr)
-		if confValue, ok := confParams[primaryKey.Name]; ok { //id处理器
-			if postReg.MatchString(confValue) {
-				confMatch := postReg.FindAllStringSubmatch(confValue, -1)
-				id = confParams[confMatch[0][1]]
-			} else {
-				id = confValue
+	if len(tableMeta.PrimaryKeys) > 0 {
+		primaryKey := tableMeta.GetColumn(tableMeta.PrimaryKeys[0]) // 限制单一主键
+		//32位guid
+		if primaryKey != nil && !primaryKey.IsAutoIncrement {
+			id = framework.Guid()
+			columnsStr = appendColumnStr(columnsStr, primaryKey.Name)
+			valuesStr = appendValueStr(valuesStr)
+			if confValue, ok := confParams[primaryKey.Name]; ok { //id处理器
+				if postReg.MatchString(confValue) {
+					confMatch := postReg.FindAllStringSubmatch(confValue, -1)
+					id = confParams[confMatch[0][1]]
+				} else {
+					id = confValue
+				}
 			}
+			values = append(values, id)
 		}
-		values = append(values, id)
 	}
+	
 	if createColumn := tableMeta.GetColumn("create_time"); createColumn != nil {
 		columnsStr = appendColumnStr(columnsStr, createColumn.Name)
 		if len(valuesStr) > 0 {
