@@ -121,6 +121,9 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 	columnsStr := ""
 	valuesStr := ""
 	tableMeta := DbApiInstance.GetMeta(sqlConf.Table)
+	for k, v := range confParams {
+		requestJson[k] = v
+	}
 	for k, v := range requestJson {
 		if column := tableMeta.GetColumn(k);
 			column != nil && !column.IsAutoIncrement {
@@ -150,12 +153,11 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 			valuesStr = "0"
 		}
 	}
-	id = framework.Guid()
 
 	primaryKey := tableMeta.GetColumn(tableMeta.PrimaryKeys[0]) // 限制单一主键
 	//32位guid
 	if primaryKey != nil && !primaryKey.IsAutoIncrement {
-
+		id = framework.Guid()
 		columnsStr = appendColumnStr(columnsStr, primaryKey.Name)
 		valuesStr = appendValueStr(valuesStr)
 		if confValue, ok := confParams[primaryKey.Name]; ok { //id处理器
@@ -190,9 +192,10 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 	if framework.ProcessError(err) {
 		return nil, err
 	}
-	res.RowsAffected()
-	errors.New("")
 	if lid, err := res.LastInsertId(); err == nil {
+		if len(id) > 0 {
+			return id, nil
+		}
 		return lid, nil
 	}
 	return id, nil
