@@ -100,12 +100,12 @@ func InitSqlConfApi(filePath string) {
 			sqlApi.Sqls = append(sqlApi.Sqls, *oneSql)
 		}
 		//注册每个配置对应的接口服务
-		initSqlApi(*sqlApi)
+		registerSqlConfApi(*sqlApi)
 	}
 
 }
 
-func initSqlApi(sqlApi SqlApi) {
+func registerSqlConfApi(sqlApi SqlApi) {
 	if len(sqlApi.Path) <= 0 {
 		log.Printf("sqlApi注册失败 : %#v 没有服务路径", sqlApi)
 		return

@@ -94,6 +94,25 @@ func exec(session xorm.Session, sqlConf SqlConf,
 	}
 }
 
+func appendColumnStr(columnsStr string, columnName string) string {
+	if len(columnName) <= 0 {
+		return columnsStr
+	}
+	if len(columnsStr) > 0 {
+		return fmt.Sprintf("%s, %s", columnsStr, columnName)
+	} else {
+		return columnName
+	}
+}
+
+func appendValueStr(valuesStr string) string {
+	if len(valuesStr) > 0 {
+		return fmt.Sprintf("%s, ?", valuesStr)
+	} else {
+		return "?"
+	}
+}
+
 func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]interface{},
 	confParams map[string]string) (interface{}, error) {
 
@@ -108,16 +127,8 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 			if column.Name == "create_time" || column.Name == "update_time" {
 				continue
 			}
-			if len(columnsStr) > 0 {
-				columnsStr = fmt.Sprintf("%s, %s", columnsStr, column.Name)
-			} else {
-				columnsStr = column.Name
-			}
-			if len(valuesStr) > 0 {
-				valuesStr = fmt.Sprintf("%s, ?", valuesStr)
-			} else {
-				valuesStr = "?"
-			}
+			columnsStr = appendColumnStr(columnsStr, column.Name)
+			valuesStr = appendValueStr(valuesStr)
 			if confValue, ok := confParams[k]; ok {
 				if postReg.MatchString(confValue) {
 					confMatch := postReg.FindAllStringSubmatch(confValue, -1)
@@ -132,11 +143,7 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 	}
 	//处理is_delete
 	if isDelete := tableMeta.GetColumn("is_delete"); isDelete != nil {
-		if len(columnsStr) > 0 {
-			columnsStr = fmt.Sprintf("%s, %s", columnsStr, isDelete.Name)
-		} else {
-			columnsStr = isDelete.Name
-		}
+		columnsStr = appendColumnStr(columnsStr, isDelete.Name)
 		if len(valuesStr) > 0 {
 			valuesStr = fmt.Sprintf("%s, 0", valuesStr)
 		} else {
@@ -144,11 +151,13 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 		}
 	}
 	id = framework.Guid()
+
 	primaryKey := tableMeta.GetColumn(tableMeta.PrimaryKeys[0]) // 限制单一主键
 	//32位guid
 	if primaryKey != nil && !primaryKey.IsAutoIncrement {
-		columnsStr = fmt.Sprintf("%s, %s", columnsStr, primaryKey.Name)
-		valuesStr = fmt.Sprintf("%s, ?", valuesStr)
+
+		columnsStr = appendColumnStr(columnsStr, primaryKey.Name)
+		valuesStr = appendValueStr(valuesStr)
 		if confValue, ok := confParams[primaryKey.Name]; ok { //id处理器
 			if postReg.MatchString(confValue) {
 				confMatch := postReg.FindAllStringSubmatch(confValue, -1)
@@ -160,12 +169,20 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 		values = append(values, id)
 	}
 	if createColumn := tableMeta.GetColumn("create_time"); createColumn != nil {
-		columnsStr = fmt.Sprintf("%s, %s", columnsStr, createColumn.Name)
-		valuesStr = fmt.Sprintf("%s, %s", valuesStr, "now()")
+		columnsStr = appendColumnStr(columnsStr, createColumn.Name)
+		if len(valuesStr) > 0 {
+			valuesStr = fmt.Sprintf("%s, %s", valuesStr, "now()")
+		} else {
+			valuesStr = "now()"
+		}
 	}
 	if updateColumn := tableMeta.GetColumn("update_time"); updateColumn != nil {
-		columnsStr = fmt.Sprintf("%s, %s", columnsStr, updateColumn.Name)
-		valuesStr = fmt.Sprintf("%s, %s", valuesStr, "now()")
+		columnsStr = appendColumnStr(columnsStr, updateColumn.Name)
+		if len(valuesStr) > 0 {
+			valuesStr = fmt.Sprintf("%s, %s", valuesStr, "now()")
+		} else {
+			valuesStr = "now()"
+		}
 	}
 	sql := fmt.Sprintf("insert into %s (%s) values (%s);", tableMeta.Name, columnsStr, valuesStr)
 
