@@ -21,6 +21,10 @@ func (this *Server) RegisterFilter(path string, handle func(Context) bool) {
 
 }
 
+func RegisterFilter(path string, handle func(Context) bool) {
+	globalServer.RegisterFilter(path, handle)
+}
+
 type filterProcessor struct {
 	pathReg *regexp.Regexp
 	params  []string
