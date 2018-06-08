@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func (this *Server) Filter(path string, handle func(Context) bool) {
+func (this *Server) RegisterFilter(path string, handle func(Context) bool) {
 	this.Lock()
 	defer this.Unlock()
 	if len(path) <= 0 {
