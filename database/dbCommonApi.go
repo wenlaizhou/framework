@@ -27,7 +27,7 @@ func InitDbApi(conf framework.Config) {
 		return
 	}
 	initDbApi()
-	tablesMeta, err := DbApiInstance.GetEngine().DBMetas()
+	tablesMeta, err := dbApiInstance.GetEngine().DBMetas()
 	if framework.ProcessError(err) {
 		return
 	}
@@ -81,7 +81,7 @@ func InitDbApi(conf framework.Config) {
 			}
 
 			logSql(*logger, context, sqlStr, nil)
-			res, err := DbApiInstance.GetEngine().QueryString(sqlStr)
+			res, err := dbApiInstance.GetEngine().QueryString(sqlStr)
 			if !framework.ProcessError(err) {
 				logger.Printf("%s\n, %s\n, %s\n",
 					context.RemoteAddr(),
@@ -180,7 +180,7 @@ func registerTableInsert(tableMeta core.Table, logger log.Logger) {
 				valuesStr = fmt.Sprintf("%s, %s", valuesStr, "now()")
 			}
 			sql := fmt.Sprintf("insert into %s (%s) values (%s);", tableMeta.Name, columnsStr, valuesStr)
-			res, err := DbApiInstance.GetEngine().Exec(sql, values...)
+			res, err := dbApiInstance.GetEngine().Exec(sql, values...)
 			if !framework.ProcessError(err) {
 				//记录日志
 				logSql(logger, context, sql, values)
@@ -218,7 +218,7 @@ func registerTableDelete(tableMeta core.Table, logger log.Logger) {
 			}
 			primaryKey := tableMeta.PrimaryKeys[0]
 			sql := fmt.Sprintf("delete from %s where %s = ?;", tableMeta.Name, primaryKey)
-			res, err := DbApiInstance.GetEngine().Exec(sql, primaryValue)
+			res, err := dbApiInstance.GetEngine().Exec(sql, primaryValue)
 			if !framework.ProcessError(err) {
 				logSql(logger, context, sql, []interface{}{primaryValue})
 				rowsAffected, err := res.RowsAffected()
@@ -276,7 +276,7 @@ func registerTableUpdate(tableMeta core.Table, logger log.Logger) {
 			sql := fmt.Sprintf("update %s set %s where %s = ?;", tableMeta.Name,
 				columnsStr, primaryKey)
 			values = append(values, primaryValue)
-			res, err := DbApiInstance.GetEngine().Exec(sql, values...)
+			res, err := dbApiInstance.GetEngine().Exec(sql, values...)
 			if !framework.ProcessError(err) {
 				logSql(logger, context, sql, values)
 				rowsAffected, err := res.RowsAffected()
@@ -344,7 +344,7 @@ func registerTableSelect(tableMeta core.Table, logger log.Logger) {
 			} else {
 				sql = fmt.Sprintf("select * from %s where %s;", tableMeta.Name, columnsStr)
 			}
-			res, err := DbApiInstance.GetEngine().QueryString(append([]interface{}{sql}, values...)...)
+			res, err := dbApiInstance.GetEngine().QueryString(append([]interface{}{sql}, values...)...)
 			if !framework.ProcessError(err) {
 				logSql(logger, context, sql, values)
 			}

@@ -120,7 +120,7 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 	var id = ""
 	columnsStr := ""
 	valuesStr := ""
-	tableMeta := DbApiInstance.GetMeta(sqlConf.Table)
+	tableMeta := dbApiInstance.GetMeta(sqlConf.Table)
 	for k, v := range confParams {
 		requestJson[k] = v
 	}
@@ -207,7 +207,7 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 func doDelete(session xorm.Session, sqlConf SqlConf,
 	requestJson map[string]interface{}) (error) {
 
-	tableMeta := DbApiInstance.GetMeta(sqlConf.Table)
+	tableMeta := dbApiInstance.GetMeta(sqlConf.Table)
 	if len(tableMeta.PrimaryKeys) <= 0 {
 		return errors.New("该表没有主键")
 	}
@@ -229,7 +229,7 @@ func doDelete(session xorm.Session, sqlConf SqlConf,
 func doUpdate(session xorm.Session, sqlConf SqlConf,
 	requestJson map[string]interface{}) (int64, error) {
 
-	tableMeta := DbApiInstance.GetMeta(sqlConf.Table)
+	tableMeta := dbApiInstance.GetMeta(sqlConf.Table)
 	if len(tableMeta.PrimaryKeys) <= 0 {
 		return -1, errors.New("当前操作只支持有主键的表")
 	}
@@ -278,7 +278,7 @@ func doUpdate(session xorm.Session, sqlConf SqlConf,
 func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]interface{},
 	confParams map[string]string) ([]map[string]string, error) {
 
-	tableMeta := DbApiInstance.GetMeta(sqlConf.Table)
+	tableMeta := dbApiInstance.GetMeta(sqlConf.Table)
 	if len(requestJson) <= 0 && len(confParams) <= 0 {
 		return session.QueryString(fmt.Sprintf("select * from %s", tableMeta.Name), )
 	}

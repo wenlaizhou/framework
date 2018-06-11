@@ -63,7 +63,7 @@ type DbApi struct {
 	dataStruct map[string]reflect.Type
 }
 
-var DbApiInstance *DbApi
+var dbApiInstance *DbApi
 
 var dbApiInstanceLock = new(sync.Mutex)
 
@@ -99,11 +99,11 @@ func initDbApi() {
 	dbApiInstanceLock.Lock()
 	defer dbApiInstanceLock.Unlock()
 
-	if DbApiInstance != nil {
+	if dbApiInstance != nil {
 		return
 	}
 	var err error
-	DbApiInstance, err = NewDbApi(
+	dbApiInstance, err = NewDbApi(
 		Config["db.host"].(string),
 		int(Config["db.port"].(float64)),
 		Config["db.user"].(string),
@@ -112,7 +112,7 @@ func initDbApi() {
 	if framework.ProcessError(err) {
 		return
 	}
-	DbApiInstance.GetEngine().ShowSQL(true)
+	dbApiInstance.GetEngine().ShowSQL(true)
 }
 
 func (this *DbApi) GetStruct() map[string]map[string]string {
@@ -134,6 +134,16 @@ func (this *DbApi) GetMeta(tableName string) core.Table {
 
 func (this *DbApi) GetEngine() *xorm.Engine {
 	return this.orm
+}
+
+// 获取
+func GetMeta(tableName string) core.Table {
+	return dbApiInstance.GetMeta(tableName)
+}
+
+// 获取数据库引擎
+func GetEngine() *xorm.Engine {
+	return dbApiInstance.GetEngine()
 }
 
 func (this *DbApi) RegisterDbApi(orm interface{}) {

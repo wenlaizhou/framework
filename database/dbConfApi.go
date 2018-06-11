@@ -124,7 +124,7 @@ func registerSqlConfApi(sqlApi SqlApi) {
 			if err != nil {
 				jsonData = make(map[string]interface{})
 			}
-			session := DbApiInstance.GetEngine().NewSession()
+			session := dbApiInstance.GetEngine().NewSession()
 			defer session.Close()
 			if sqlApi.Transaction {
 				session.Begin()
