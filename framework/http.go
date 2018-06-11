@@ -78,7 +78,7 @@ func (this *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ctx.SetHeader(AccessControlAllowMethods, METHODS)
 		ctx.SetHeader(AccessControlAllowHeaders, "*")
 		if strings.ToUpper(ctx.GetMethod()) == OPTIONS {
-			ctx.Code(202, "")
+			ctx.Code(202)
 			return
 		}
 	}
@@ -202,7 +202,7 @@ func (this *Server) RegisterHandler(path string, handler func(Context)) {
 	}
 
 	pathReg, err := regexp.Compile(path)
-	println(fmt.Sprintf("注册handler: %s", path))
+	log.Printf(fmt.Sprintf("注册handler: %s", path))
 	if !ProcessError(err) {
 		this.pathNodes = append(this.pathNodes, pathProcessor{
 			pathReg: pathReg,
@@ -298,8 +298,19 @@ func (this *Context) OK(contentType string, content []byte) error {
 	}
 	this.SetHeader("server", "framework")
 	_, err := this.responseWriter.Write(content)
-	this.responseWriter.WriteHeader(200)
 	return err
+}
+
+func (this *Context) Code(static int) error {
+	this.Lock()
+	defer this.Unlock()
+	if !this.writeable {
+		return errors.New("禁止重复写入response")
+	}
+	this.writeable = false
+	this.SetHeader("server", "framework")
+	this.responseWriter.WriteHeader(static)
+	return nil
 }
 
 func (this *Context) RenderTemplate(name string, model interface{}) error {
@@ -320,21 +331,6 @@ func (this *Context) RenderTemplateKV(name string, kvs ...interface{}) error {
 		}
 	}
 	return this.tpl.ExecuteTemplate(this.responseWriter, name, model)
-}
-
-func (this *Context) Code(static int, content string) error {
-	this.Lock()
-	defer this.Unlock()
-	if !this.writeable {
-		return errors.New("禁止重复写入response")
-	}
-	this.writeable = false
-	if len(content) >= 0 {
-		this.responseWriter.Write([]byte(content))
-	}
-	this.SetHeader("server", "framework")
-	this.responseWriter.WriteHeader(static)
-	return nil
 }
 
 func (this *Context) SetHeader(key string, value string) {
