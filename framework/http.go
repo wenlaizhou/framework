@@ -293,11 +293,12 @@ func (this *Context) OK(contentType string, content []byte) error {
 		return errors.New("禁止重复写入response")
 	}
 	this.writeable = false
-	this.responseWriter.WriteHeader(200)
 	if len(contentType) > 0 {
 		this.SetHeader(ContentType, contentType)
 	}
+	this.SetHeader("server", "framework")
 	_, err := this.responseWriter.Write(content)
+	this.responseWriter.WriteHeader(200)
 	return err
 }
 
@@ -328,11 +329,11 @@ func (this *Context) Code(static int, content string) error {
 		return errors.New("禁止重复写入response")
 	}
 	this.writeable = false
-	this.responseWriter.WriteHeader(static)
 	if len(content) >= 0 {
-		_, err := this.responseWriter.Write([]byte(content))
-		return err
+		this.responseWriter.Write([]byte(content))
 	}
+	this.SetHeader("server", "framework")
+	this.responseWriter.WriteHeader(static)
 	return nil
 }
 
