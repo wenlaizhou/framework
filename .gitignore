@@ -3,6 +3,8 @@
 *.iml
 *.class
 
+test.*
+
 ## for maven
 target
 pom.xml.versionsBackup
