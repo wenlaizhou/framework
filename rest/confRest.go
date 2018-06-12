@@ -52,7 +52,7 @@ func ProcessFileConf(conf FileConf) {
 			if framework.Exists(conf.File) {
 				data, err := ioutil.ReadFile(conf.File)
 				if err != nil {
-					context.Code(404, "")
+					context.Code(404)
 					return
 				}
 				if len(conf.ContentType) > 0 {
@@ -62,7 +62,7 @@ func ProcessFileConf(conf FileConf) {
 				}
 				return
 			} else {
-				context.Code(404, "")
+				context.Code(404)
 			}
 		})
 }
