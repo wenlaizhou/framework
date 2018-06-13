@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"log"
 	"fmt"
+	"errors"
 )
 
 type SqlApi struct {
@@ -66,13 +67,14 @@ var postReg = regexp.MustCompile("\\$\\{(.*?)\\}")
 var resultReplaceReg = "#\\{%s\\.(.*?)\\}"
 var resultReg = "$\\{%s\\.(.*?)\\}"
 var replaceReg = regexp.MustCompile("#\\{(.*?)\\}")
+var sqlApis = make(map[string]SqlApi)
 
 func InitSqlConfApi(filePath string) {
 	apiConf := framework.LoadXml(filePath)
 	apiElements := apiConf.FindElements("//sqlApi")
 	for _, apiEle := range apiElements {
 		sqlIds := make([]string, 0)
-		sqlApi := new(SqlApi)
+		sqlApi := *new(SqlApi)
 		sqlApi.Transaction = apiEle.SelectAttrValue("transaction", "") == "true"
 		sqlApi.Path = apiEle.SelectAttrValue("path", "")
 		sqlApi.Sqls = make([]SqlConf, 0)
@@ -100,7 +102,98 @@ func InitSqlConfApi(filePath string) {
 			sqlApi.Sqls = append(sqlApi.Sqls, *oneSql)
 		}
 		//注册每个配置对应的接口服务
-		registerSqlConfApi(*sqlApi)
+		sqlApis[sqlApi.Path] = sqlApi
+		registerSqlConfApi(sqlApi)
+	}
+
+}
+
+func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]string, error) {
+	sqlApi, ok := sqlApis[path]
+	if !ok {
+		return nil, errors.New("没有该路径sqlApi配置")
+	}
+
+	//处理guid
+	for k, v := range sqlApi.Params {
+		if v == "{{guid}}" {
+			sqlApi.Params[k] = framework.Guid()
+		}
+	}
+
+	session := dbApiInstance.GetEngine().NewSession()
+	defer session.Close()
+	if sqlApi.Transaction {
+		session.Begin()
+	}
+	result := make([]map[string]string, 0)
+
+	for _, sqlInstance := range sqlApi.Sqls {
+		if sqlInstance.HasSql {
+			oneSqlRes, err := exec(*session, sqlInstance, params, sqlApi.Params)
+			if framework.ProcessError(err) {
+				framework.ProcessError(session.Rollback())
+				return result, err
+			}
+			if a, b := oneSqlRes.([]map[string]string); b {
+				result = append(result, a...)
+			}
+			continue
+		}
+
+		//table 中含有参数类型数据, 进行处理
+		if postReg.MatchString(sqlInstance.Table) {
+			tableParam := postReg.FindAllStringSubmatch(sqlInstance.Table, -1)
+			tableParamName := tableParam[0][1]
+			if _, ok := params[tableParamName]; ok {
+				sqlInstance.Table = params[tableParamName].(string)
+			}
+			if _, ok := sqlApi.Params[tableParamName]; ok {
+				sqlInstance.Table = sqlApi.Params[tableParamName]
+			}
+		}
+
+		switch {
+		case "insert" == sqlInstance.Type:
+			id, err := doInsert(*session, sqlInstance, params, sqlApi.Params)
+			if framework.ProcessError(err) {
+				framework.ProcessError(session.Rollback())
+				return result, err
+			}
+			//增加id配置处理
+			sqlApi.Params[fmt.Sprintf("%s.id", sqlInstance.Id)] = fmt.Sprintf("%v", id)
+			break
+		case "select" == sqlInstance.Type:
+			oneSqlRes, err := doSelect(*session, sqlInstance, params, sqlApi.Params)
+			if framework.ProcessError(err) {
+				framework.ProcessError(session.Rollback())
+				return result, err
+			}
+			result = append(result, oneSqlRes...)
+			break
+		case "update" == sqlInstance.Type:
+			_, err := doUpdate(*session, sqlInstance, params)
+			if framework.ProcessError(err) {
+				framework.ProcessError(session.Rollback())
+				return result, err
+			}
+			break
+		case "delete" == sqlInstance.Type:
+			err := doDelete(*session, sqlInstance, params)
+			if framework.ProcessError(err) {
+				framework.ProcessError(session.Rollback())
+				return result, err
+			}
+			break
+		}
+
+	}
+	if len(sqlApi.Params) > 0 {
+		result = append(result, sqlApi.Params)
+	}
+
+	if sqlApi.Transaction {
+		framework.ProcessError(session.Commit())
 	}
 
 }
@@ -114,98 +207,18 @@ func registerSqlConfApi(sqlApi SqlApi) {
 	framework.RegisterHandler(sqlApi.Path,
 		func(context framework.Context) {
 			sqlApi := sqlApi
-			//处理guid
-			for k, v := range sqlApi.Params {
-				if v == "{{guid}}" {
-					sqlApi.Params[k] = framework.Guid()
-				}
-			}
 			jsonData, err := context.GetJSON()
 			if framework.ProcessError(err) {
 				jsonData = make(map[string]interface{})
 			}
 			log.Printf("sql-api 获取调用: %s", sqlApi.Path)
 			log.Printf("参数: %v", jsonData)
-			session := dbApiInstance.GetEngine().NewSession()
-			defer session.Close()
-			if sqlApi.Transaction {
-				session.Begin()
+			res, err := ExecSqlConfApi(jsonData, sqlApi.Path)
+			if framework.ProcessError(err) {
+				context.ApiResponse(-1, err.Error(), nil)
+			} else {
+				context.ApiResponse(0, "", res)
 			}
-
-			result := make([]map[string]string, 0)
-
-			for _, sqlInstance := range sqlApi.Sqls {
-				if sqlInstance.HasSql {
-					oneSqlRes, err := exec(*session, sqlInstance, jsonData, sqlApi.Params)
-					if framework.ProcessError(err) {
-						framework.ProcessError(session.Rollback())
-						context.ApiResponse(-1, err.Error(), nil)
-						return
-					}
-					if a, b := oneSqlRes.([]map[string]string); b {
-						result = append(result, a...)
-					}
-				} else {
-
-					//table 中含有参数类型数据, 进行处理
-					if postReg.MatchString(sqlInstance.Table) {
-						tableParam := postReg.FindAllStringSubmatch(sqlInstance.Table, -1)
-						tableParamName := tableParam[0][1]
-						if _, ok := jsonData[tableParamName]; ok {
-							sqlInstance.Table = jsonData[tableParamName].(string)
-						}
-						if _, ok := sqlApi.Params[tableParamName]; ok {
-							sqlInstance.Table = sqlApi.Params[tableParamName]
-						}
-					}
-
-					switch {
-					case "insert" == sqlInstance.Type:
-						id, err := doInsert(*session, sqlInstance, jsonData, sqlApi.Params)
-						if framework.ProcessError(err) {
-							framework.ProcessError(session.Rollback())
-							context.ApiResponse(-1, err.Error(), nil)
-							return
-						}
-						//增加id配置处理
-						sqlApi.Params[fmt.Sprintf("%s.id", sqlInstance.Id)] = fmt.Sprintf("%v", id)
-						break
-					case "select" == sqlInstance.Type:
-						oneSqlRes, err := doSelect(*session, sqlInstance, jsonData, sqlApi.Params)
-						if framework.ProcessError(err) {
-							framework.ProcessError(session.Rollback())
-							context.ApiResponse(-1, err.Error(), nil)
-							return
-						}
-						result = append(result, oneSqlRes...)
-						break
-					case "update" == sqlInstance.Type:
-						_, err := doUpdate(*session, sqlInstance, jsonData)
-						if framework.ProcessError(err) {
-							framework.ProcessError(session.Rollback())
-							context.ApiResponse(-1, err.Error(), nil)
-							return
-						}
-						break
-					case "delete" == sqlInstance.Type:
-						err := doDelete(*session, sqlInstance, jsonData)
-						if framework.ProcessError(err) {
-							framework.ProcessError(session.Rollback())
-							context.ApiResponse(-1, err.Error(), nil)
-							return
-						}
-						break
-					}
-				}
-			}
-			if len(sqlApi.Params) > 0 {
-				result = append(result, sqlApi.Params)
-			}
-
-			if sqlApi.Transaction {
-				framework.ProcessError(session.Commit())
-			}
-			context.ApiResponse(0, "", result)
 			return
 
 		})
