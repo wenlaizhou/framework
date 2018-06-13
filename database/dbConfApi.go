@@ -121,7 +121,7 @@ func registerSqlConfApi(sqlApi SqlApi) {
 				}
 			}
 			jsonData, err := context.GetJSON()
-			if err != nil {
+			if framework.ProcessError(err) {
 				jsonData = make(map[string]interface{})
 			}
 			session := dbApiInstance.GetEngine().NewSession()
@@ -135,7 +135,7 @@ func registerSqlConfApi(sqlApi SqlApi) {
 			for _, sqlInstance := range sqlApi.Sqls {
 				if sqlInstance.HasSql {
 					oneSqlRes, err := exec(*session, sqlInstance, jsonData, sqlApi.Params)
-					if err != nil {
+					if framework.ProcessError(err) {
 						framework.ProcessError(session.Rollback())
 						context.ApiResponse(-1, err.Error(), nil)
 						return
@@ -160,7 +160,7 @@ func registerSqlConfApi(sqlApi SqlApi) {
 					switch {
 					case "insert" == sqlInstance.Type:
 						id, err := doInsert(*session, sqlInstance, jsonData, sqlApi.Params)
-						if err != nil {
+						if framework.ProcessError(err) {
 							framework.ProcessError(session.Rollback())
 							context.ApiResponse(-1, err.Error(), nil)
 							return
@@ -170,7 +170,7 @@ func registerSqlConfApi(sqlApi SqlApi) {
 						break
 					case "select" == sqlInstance.Type:
 						oneSqlRes, err := doSelect(*session, sqlInstance, jsonData, sqlApi.Params)
-						if err != nil {
+						if framework.ProcessError(err) {
 							framework.ProcessError(session.Rollback())
 							context.ApiResponse(-1, err.Error(), nil)
 							return
@@ -179,7 +179,7 @@ func registerSqlConfApi(sqlApi SqlApi) {
 						break
 					case "update" == sqlInstance.Type:
 						_, err := doUpdate(*session, sqlInstance, jsonData)
-						if err != nil {
+						if framework.ProcessError(err) {
 							framework.ProcessError(session.Rollback())
 							context.ApiResponse(-1, err.Error(), nil)
 							return
@@ -187,7 +187,7 @@ func registerSqlConfApi(sqlApi SqlApi) {
 						break
 					case "delete" == sqlInstance.Type:
 						err := doDelete(*session, sqlInstance, jsonData)
-						if err != nil {
+						if framework.ProcessError(err) {
 							framework.ProcessError(session.Rollback())
 							context.ApiResponse(-1, err.Error(), nil)
 							return
