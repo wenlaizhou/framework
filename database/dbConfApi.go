@@ -195,7 +195,7 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 	if sqlApi.Transaction {
 		framework.ProcessError(session.Commit())
 	}
-
+	return result, nil
 }
 
 func registerSqlConfApi(sqlApi SqlApi) {
