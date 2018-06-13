@@ -245,7 +245,7 @@ func registerTableUpdate(tableMeta core.Table, logger log.Logger) {
 			}
 			primaryValue, ok := params["id"]
 			if !ok || primaryValue == nil {
-				context.ApiResponse(-1, "删除数据必须指定id值", nil)
+				context.ApiResponse(-1, "修改数据必须指定id值", nil)
 				return
 			}
 			primaryKey := tableMeta.PrimaryKeys[0]
