@@ -124,6 +124,8 @@ func registerSqlConfApi(sqlApi SqlApi) {
 			if framework.ProcessError(err) {
 				jsonData = make(map[string]interface{})
 			}
+			log.Printf("sql-api 获取调用: %s", sqlApi.Path)
+			log.Printf("参数: %v", jsonData)
 			session := dbApiInstance.GetEngine().NewSession()
 			defer session.Close()
 			if sqlApi.Transaction {
