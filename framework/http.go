@@ -226,7 +226,8 @@ type pathProcessor struct {
 }
 
 func staticProcessor(ctx Context) {
-	http.ServeFile(ctx.responseWriter, ctx.Request, ctx.Request.RequestURI[1:])
+	//解决?参数问题
+	http.ServeFile(ctx.responseWriter, ctx.Request, ctx.Request.URL.Path)
 }
 
 // 错误处理
