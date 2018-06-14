@@ -227,7 +227,7 @@ type pathProcessor struct {
 
 func staticProcessor(ctx Context) {
 	//解决?参数问题
-	http.ServeFile(ctx.responseWriter, ctx.Request, ctx.Request.URL.Path[1:])
+	http.ServeFile(ctx.Response, ctx.Request, ctx.Request.URL.Path[1:])
 }
 
 // 错误处理
@@ -244,11 +244,11 @@ func ProcessError(err error) bool {
 }
 
 type Context struct {
-	Request        *http.Request
-	responseWriter http.ResponseWriter
-	tpl            *template.Template
-	pathParams     map[string]string
-	writeable      bool
+	Request    *http.Request
+	Response   http.ResponseWriter
+	tpl        *template.Template
+	pathParams map[string]string
+	writeable  bool
 	sync.RWMutex
 }
 
@@ -298,7 +298,7 @@ func (this *Context) OK(contentType string, content []byte) error {
 		this.SetHeader(ContentType, contentType)
 	}
 	this.SetHeader("server", "framework")
-	_, err := this.responseWriter.Write(content)
+	_, err := this.Response.Write(content)
 	return err
 }
 
@@ -310,13 +310,13 @@ func (this *Context) Code(static int) error {
 	}
 	this.writeable = false
 	this.SetHeader("server", "framework")
-	this.responseWriter.WriteHeader(static)
+	this.Response.WriteHeader(static)
 	return nil
 }
 
 func (this *Context) RenderTemplate(name string, model interface{}) error {
 	if this.tpl != nil {
-		return this.tpl.ExecuteTemplate(this.responseWriter, name, model)
+		return this.tpl.ExecuteTemplate(this.Response, name, model)
 	}
 	return errors.New("template 不存在")
 }
@@ -331,23 +331,23 @@ func (this *Context) RenderTemplateKV(name string, kvs ...interface{}) error {
 			model[v] = kvs[i+1]
 		}
 	}
-	return this.tpl.ExecuteTemplate(this.responseWriter, name, model)
+	return this.tpl.ExecuteTemplate(this.Response, name, model)
 }
 
 func (this *Context) SetHeader(key string, value string) {
-	this.responseWriter.Header().Set(key, value)
+	this.Response.Header().Set(key, value)
 }
 
 func (this *Context) DelHeader(key string) {
-	this.responseWriter.Header().Del(key)
+	this.Response.Header().Del(key)
 }
 
 func newContext(w http.ResponseWriter, r *http.Request) Context {
 	return Context{
-		writeable:      true,
-		responseWriter: w,
-		Request:        r,
-		pathParams:     make(map[string]string),
+		writeable:  true,
+		Response:   w,
+		Request:    r,
+		pathParams: make(map[string]string),
 	}
 }
 
