@@ -246,6 +246,7 @@ func ProcessError(err error) bool {
 type Context struct {
 	Request    *http.Request
 	Response   http.ResponseWriter
+	body       []byte
 	tpl        *template.Template
 	pathParams map[string]string
 	writeable  bool
@@ -261,9 +262,16 @@ func (this *Context) GetPathParam(key string) (string) {
 }
 
 func (this *Context) GetBody() (string) {
+	this.Lock()
+	defer this.Unlock()
+	if len(this.body) > 0 {
+		return string(this.body)
+	}
 	data, err := ioutil.ReadAll(this.Request.Body)
+	this.body = data
 	if err == nil && len(data) > 0 {
-		return string(data)
+		this.body = data
+		return string(this.body)
 	}
 	return ""
 }
