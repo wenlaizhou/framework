@@ -270,8 +270,11 @@ func (this *Context) GetBody() (string) {
 
 func (this *Context) GetJSON() (map[string]interface{}, error) {
 	res := make(map[string]interface{})
-	err := json.Unmarshal([]byte(this.GetBody()), &res)
-	return res, err
+	if len(this.GetBody()) > 0 {
+		err := json.Unmarshal([]byte(this.GetBody()), &res)
+		return res, err
+	}
+	return res, nil
 }
 
 func (this *Context) WriteJSON(data interface{}) error {
