@@ -110,14 +110,16 @@ func InitSqlConfApi(filePath string) {
 
 func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]string, error) {
 	sqlApi, ok := sqlApis[path]
+	sqlApiParams := make(map[string]string)
 	if !ok {
 		return nil, errors.New("没有该路径sqlApi配置")
 	}
 
 	//处理guid
 	for k, v := range sqlApi.Params {
+		sqlApiParams[k] = v
 		if v == "{{guid}}" {
-			sqlApi.Params[k] = framework.Guid()
+			sqlApiParams[k] = framework.Guid()
 		}
 	}
 
@@ -130,7 +132,7 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 
 	for _, sqlInstance := range sqlApi.Sqls {
 		if sqlInstance.HasSql {
-			oneSqlRes, err := exec(*session, sqlInstance, params, sqlApi.Params)
+			oneSqlRes, err := exec(*session, sqlInstance, params, sqlApiParams)
 			if framework.ProcessError(err) {
 				framework.ProcessError(session.Rollback())
 				return result, err
@@ -148,14 +150,14 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 			if _, ok := params[tableParamName]; ok {
 				sqlInstance.Table = params[tableParamName].(string)
 			}
-			if _, ok := sqlApi.Params[tableParamName]; ok {
-				sqlInstance.Table = sqlApi.Params[tableParamName]
+			if _, ok := sqlApiParams[tableParamName]; ok {
+				sqlInstance.Table = sqlApiParams[tableParamName]
 			}
 		}
 
 		switch {
 		case "insert" == sqlInstance.Type:
-			id, err := doInsert(*session, sqlInstance, params, sqlApi.Params)
+			id, err := doInsert(*session, sqlInstance, params, sqlApiParams)
 			if framework.ProcessError(err) {
 				framework.ProcessError(session.Rollback())
 				return result, err
@@ -164,7 +166,7 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 			sqlApi.Params[fmt.Sprintf("%s.id", sqlInstance.Id)] = fmt.Sprintf("%v", id)
 			break
 		case "select" == sqlInstance.Type:
-			oneSqlRes, err := doSelect(*session, sqlInstance, params, sqlApi.Params)
+			oneSqlRes, err := doSelect(*session, sqlInstance, params, sqlApiParams)
 			if framework.ProcessError(err) {
 				framework.ProcessError(session.Rollback())
 				return result, err
@@ -188,8 +190,8 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 		}
 
 	}
-	if len(sqlApi.Params) > 0 {
-		result = append(result, sqlApi.Params)
+	if len(sqlApiParams) > 0 {
+		result = append(result, sqlApiParams)
 	}
 
 	if sqlApi.Transaction {
