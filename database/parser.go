@@ -78,10 +78,19 @@ func exec(session xorm.Session, sqlConf SqlConf,
 		pa.Key = p.Key
 		switch p.Type {
 		case Post:
-			if reqValue, ok := requestJson[p.Key]; ok {
-				pa.Value = reqValue
+			if confValue, ok := confParams[p.Key]; ok {
+				if postReg.MatchString(confValue) {
+					confMatch := postReg.FindAllStringSubmatch(confValue, -1)
+					pa.Value = confParams[confMatch[0][1]]
+				} else {
+					pa.Value = confValue
+				}
 			} else {
-				pa.Value = nil
+				if reqValue, ok := requestJson[p.Key]; ok {
+					pa.Value = reqValue
+				} else {
+					pa.Value = nil
+				}
 			}
 			variable = append(variable, pa.Value)
 		}
@@ -172,7 +181,7 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 			values = append(values, id)
 		}
 	}
-	
+
 	if createColumn := tableMeta.GetColumn("create_time"); createColumn != nil {
 		columnsStr = appendColumnStr(columnsStr, createColumn.Name)
 		if len(valuesStr) > 0 {
