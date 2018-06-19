@@ -9,6 +9,8 @@ var globalSession map[string]Session
 
 var globalSessionLock sync.RWMutex
 
+var globalSessionExpireSeconds = 6000
+
 type Session struct {
 	sync.RWMutex
 	id            string
@@ -16,10 +18,29 @@ type Session struct {
 	lastTouchTime time.Time
 }
 
+func (this *Session) Set() {
+
+}
+
+func (this *Session) Get() {
+
+}
+
+func (this *Session) Id() {
+
+}
+
 func init() {
-	//定期清除session
-	Schedule("", 30*60, func() {
+	//session过期
+	Schedule("session-expire", 30*60, func() {
 		globalSessionLock.Lock()
 		defer globalSessionLock.Unlock()
+		for k, v := range globalSession {
+			v.Lock()
+			if time.Now().Sub(v.lastTouchTime).Seconds() > float64(globalSessionExpireSeconds) {
+				delete(globalSession, k)
+			}
+			v.Unlock()
+		}
 	})
 }
