@@ -9,7 +9,7 @@ var globalSession map[string]Session
 
 var globalSessionLock sync.RWMutex
 
-var globalSessionExpireSeconds = 6000
+var globalSessionExpireSeconds = 6000.00
 
 type Session struct {
 	sync.RWMutex
@@ -37,7 +37,7 @@ func init() {
 		defer globalSessionLock.Unlock()
 		for k, v := range globalSession {
 			v.Lock()
-			if time.Now().Sub(v.lastTouchTime).Seconds() > float64(globalSessionExpireSeconds) {
+			if time.Now().Sub(v.lastTouchTime).Seconds() > globalSessionExpireSeconds {
 				delete(globalSession, k)
 			}
 			v.Unlock()
