@@ -69,6 +69,9 @@ var resultReg = "$\\{%s\\.(.*?)\\}"
 var replaceReg = regexp.MustCompile("#\\{(.*?)\\}")
 var sqlApis = make(map[string]SqlApi)
 
+// 初始化数据库api配置
+//
+// 配置文件路径
 func InitSqlConfApi(filePath string) {
 	apiConf := framework.LoadXml(filePath)
 	apiElements := apiConf.FindElements("//sqlApi")

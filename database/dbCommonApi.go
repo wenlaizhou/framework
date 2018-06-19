@@ -18,6 +18,15 @@ var Config framework.Config
 
 var inited = false
 
+// 初始化数据库连接	, 配置:
+// {
+//	enableDbApi
+// 	db.host
+// 	db.port
+//	db.user
+//	db.password
+//	db.database
+// }
 func InitDbApi(conf framework.Config) {
 
 	Config = conf
@@ -41,11 +50,15 @@ func InitDbApi(conf framework.Config) {
 		registerTableCommonApi(*tableMeta)
 	}
 	registerTables()
+	_, ok = conf["logPath"]
+	if !ok {
+		conf["logPath"] = "logs"
+	}
 	if !framework.Exists(conf["logPath"].(string)) {
 		framework.Mkdir(conf["logPath"].(string))
 	}
-	logPath := fmt.Sprintf("%s/sql.log", conf["logPath"])
-	fs, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND, os.ModePerm)
+	sqlLogPath := fmt.Sprintf("%s/sql.log", conf["logPath"])
+	fs, err := os.OpenFile(sqlLogPath, os.O_CREATE|os.O_APPEND, os.ModePerm)
 	if framework.ProcessError(err) {
 		return
 	}
