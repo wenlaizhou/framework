@@ -103,9 +103,24 @@ func initDbApi() {
 		return
 	}
 	var err error
+
+	//类型判断
+	var port int
+	switch v := Config["db.port"].(type) {
+	case int64:
+		port = int(v)
+		break
+	case int:
+		port = v
+		break
+	case string:
+		port, _ = strconv.Atoi(v)
+		break
+	}
+
 	dbApiInstance, err = NewDbApi(
 		Config["db.host"].(string),
-		int(Config["db.port"].(float64)),
+		port,
 		Config["db.user"].(string),
 		Config["db.password"].(string),
 		Config["db.database"].(string))
