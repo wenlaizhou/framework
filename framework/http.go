@@ -188,7 +188,9 @@ func (this *Server) RegisterHandler(path string, handler func(Context)) {
 	//	pathTri = this.pathNodes.childs
 	//}
 	if strings.HasSuffix(path, "/") {
-		path = path + ".*"
+		path = fmt.Sprintf("%s.*", path)
+	} else {
+		path = fmt.Sprintf("%s$", path)
 	}
 
 	paramMather := pathParamReg.FindAllStringSubmatch(path, -1)
