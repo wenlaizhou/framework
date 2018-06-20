@@ -182,11 +182,6 @@ func (this *Server) RegisterHandler(path string, handler func(Context)) {
 	if len(path) <= 0 {
 		return
 	}
-	//pathList := strings.Split(path, "/"
-	//pathTri := this.pathNodes
-	//for index, path := range pathList {
-	//	pathTri = this.pathNodes.childs
-	//}
 	if strings.HasSuffix(path, "/") {
 		path = fmt.Sprintf("%s.*", path)
 	} else {
@@ -312,70 +307,8 @@ func (this *Context) GetCookie(key string) string {
 	return cook.Value
 }
 
-//func (this *Context) AddCookie(c http.Cookie) string {
-//	s := fmt.Sprintf("%s=%s", sanitizeCookieName(c.Name), sanitizeCookieValue(c.Value))
-//	if c := this.Request.Header.Get("Cookie"); c != "" {
-//		this.Request.Header.Set("Cookie", c+"; "+s)
-//	} else {
-//		this.Request.Header.Set("Cookie", s)
-//	}
-//}
-
-func (this *Context) AddCookie(c *http.Cookie) {
-	this.Request.AddCookie(c)
-}
-
-// http://tools.ietf.org/html/rfc6265#section-4.1.1
-// cookie-value      = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE )
-// cookie-octet      = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E
-//           ; US-ASCII characters excluding CTLs,
-//           ; whitespace DQUOTE, comma, semicolon,
-//           ; and backslash
-// We loosen this as spaces and commas are common in cookie values
-// but we produce a quoted cookie-value in when value starts or ends
-// with a comma or space.
-// See https://golang.org/issue/7243 for the discussion.
-func sanitizeCookieValue(v string) string {
-	v = sanitizeOrWarn("Cookie.Value", validCookieValueByte, v)
-	if len(v) == 0 {
-		return v
-	}
-	if strings.IndexByte(v, ' ') >= 0 || strings.IndexByte(v, ',') >= 0 {
-		return `"` + v + `"`
-	}
-	return v
-}
-
-func validCookieValueByte(b byte) bool {
-	return 0x20 <= b && b < 0x7f && b != '"' && b != ';' && b != '\\'
-}
-
-var cookieNameSanitizer = strings.NewReplacer("\n", "-", "\r", "-")
-
-func sanitizeCookieName(n string) string {
-	return cookieNameSanitizer.Replace(n)
-}
-
-func sanitizeOrWarn(fieldName string, valid func(byte) bool, v string) string {
-	ok := true
-	for i := 0; i < len(v); i++ {
-		if valid(v[i]) {
-			continue
-		}
-		log.Printf("net/http: invalid byte %q in %s; dropping invalid bytes", v[i], fieldName)
-		ok = false
-		break
-	}
-	if ok {
-		return v
-	}
-	buf := make([]byte, 0, len(v))
-	for i := 0; i < len(v); i++ {
-		if b := v[i]; valid(b) {
-			buf = append(buf, b)
-		}
-	}
-	return string(buf)
+func (this *Context) SetCookie(c *http.Cookie) {
+	http.SetCookie(this.Response, c)
 }
 
 func (this *Context) OK(contentType string, content []byte) error {
@@ -426,14 +359,10 @@ func (this *Context) RenderTemplateKV(name string, kvs ...interface{}) error {
 }
 
 func (this *Context) SetHeader(key string, value string) {
-	this.Lock()
-	defer this.Unlock()
 	this.Response.Header().Set(key, value)
 }
 
 func (this *Context) DelHeader(key string) {
-	this.Lock()
-	defer this.Unlock()
 	this.Response.Header().Del(key)
 }
 
