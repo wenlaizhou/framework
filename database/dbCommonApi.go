@@ -35,6 +35,13 @@ func InitDbApi(conf framework.Config) {
 	if !ok || !enableDbApi.(bool) {
 		return
 	}
+	_, ok = conf["logPath"]
+	if !ok {
+		conf["logPath"] = "logs"
+	}
+	if !framework.Exists(conf["logPath"].(string)) {
+		framework.Mkdir(conf["logPath"].(string))
+	}
 	initDbApi()
 	tablesMeta, err := dbApiInstance.GetEngine().DBMetas()
 	if framework.ProcessError(err) {
@@ -50,13 +57,6 @@ func InitDbApi(conf framework.Config) {
 		registerTableCommonApi(*tableMeta)
 	}
 	registerTables()
-	_, ok = conf["logPath"]
-	if !ok {
-		conf["logPath"] = "logs"
-	}
-	if !framework.Exists(conf["logPath"].(string)) {
-		framework.Mkdir(conf["logPath"].(string))
-	}
 	sqlLogPath := fmt.Sprintf("%s/sql.log", conf["logPath"])
 	fs, err := os.OpenFile(sqlLogPath, os.O_CREATE|os.O_APPEND, os.ModePerm)
 	if framework.ProcessError(err) {
