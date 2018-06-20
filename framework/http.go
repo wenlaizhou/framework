@@ -311,6 +311,14 @@ func (this *Context) SetCookie(c *http.Cookie) {
 	http.SetCookie(this.Response, c)
 }
 
+func (this *Context) SessionSet(key string, value interface{}) {
+	getSession(*this).Set(key, value)
+}
+
+func (this *Context) SessionGet(key string) interface{} {
+	return getSession(*this).Get(key)
+}
+
 func (this *Context) OK(contentType string, content []byte) error {
 	this.Lock()
 	defer this.Unlock()

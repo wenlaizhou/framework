@@ -3,9 +3,10 @@ package framework
 import (
 	"sync"
 	"time"
+	"net/http"
 )
 
-var globalSession map[string]Session
+var globalSession = make(map[string]Session)
 
 var globalSessionLock sync.RWMutex
 
@@ -18,43 +19,55 @@ type Session struct {
 	lastTouchTime time.Time
 }
 
-func newSession(context Context) {
+func newSession(context Context) Session {
 
+	id := Guid()
+	s := Session{
+		id:            id,
+		data:          make(map[string]interface{}),
+		lastTouchTime: time.Now(),
+	}
+	context.SetCookie(&http.Cookie{
+		Name:     "sessionId",
+		Value:    id,
+		HttpOnly: true,
+		Secure:   true,
+	})
+	globalSessionLock.Lock()
+	globalSession[id] = s
+	globalSessionLock.Unlock()
+	return s
 }
 
-func getSession(id string) Session {
-	globalSessionLock.RLock()
-	defer globalSessionLock.RUnlock()
-	return globalSession[id]
+func getSession(context Context) Session {
+	s, ok := globalSession[context.GetCookie("sessionId")]
+	if ok {
+		return s
+	}
+	return newSession(context)
 }
 
-func (this *Session) Set(key string, val interface{}) {
-	this.Lock()
-	defer this.Unlock()
+func (this Session) Set(key string, val interface{}) {
 	this.data[key] = val
 }
 
-func (this *Session) Get(key string) interface{} {
-	this.RLock()
-	defer this.RUnlock()
+func (this Session) Get(key string) interface{} {
 	return this.data[key]
 }
 
-func (this *Session) Id() string {
+func (this Session) Id() string {
 	return this.id
 }
 
 func init() {
 	//session过期
-	//Schedule("session-expire", 30*60, func() {
-	//	globalSessionLock.Lock()
-	//	defer globalSessionLock.Unlock()
-	//	for k, v := range globalSession {
-	//		v.Lock()
-	//		if time.Now().Sub(v.lastTouchTime).Seconds() > globalSessionExpireSeconds {
-	//			delete(globalSession, k)
-	//		}
-	//		v.Unlock()
-	//	}
-	//})
+	Schedule("session-expire", 30*60, func() {
+		for k, v := range globalSession {
+			v.Lock()
+			if time.Now().Sub(v.lastTouchTime).Seconds() > globalSessionExpireSeconds {
+				delete(globalSession, k)
+			}
+			v.Unlock()
+		}
+	})
 }
