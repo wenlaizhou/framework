@@ -18,16 +18,30 @@ type Session struct {
 	lastTouchTime time.Time
 }
 
-func (this *Session) Set() {
+func newSession(context Context) {
 
 }
 
-func (this *Session) Get() {
-
+func getSession(id string) Session {
+	globalSessionLock.RLock()
+	defer globalSessionLock.RUnlock()
+	return globalSession[id]
 }
 
-func (this *Session) Id() {
+func (this *Session) Set(key string, val interface{}) {
+	this.Lock()
+	defer this.Unlock()
+	this.data[key] = val
+}
 
+func (this *Session) Get(key string) interface{} {
+	this.RLock()
+	defer this.RUnlock()
+	return this.data[key]
+}
+
+func (this *Session) Id() string {
+	return this.id
 }
 
 func init() {
