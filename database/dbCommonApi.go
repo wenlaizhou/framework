@@ -353,9 +353,15 @@ func registerTableSelect(tableMeta core.Table, logger log.Logger) {
 
 			sql := ""
 			if len(columnsStr) <= 0 {
-				sql = fmt.Sprintf("select * from %s;", tableMeta.Name)
+				sql = fmt.Sprintf("select * from %s", tableMeta.Name)
 			} else {
-				sql = fmt.Sprintf("select * from %s where %s;", tableMeta.Name, columnsStr)
+				sql = fmt.Sprintf("select * from %s where %s", tableMeta.Name, columnsStr)
+			}
+			//分页
+			if start, ok := params["start"]; ok {
+				if size, ok := params["size"]; ok {
+					sql = fmt.Sprintf("%s limit %v, %v;", sql, start, size)
+				}
 			}
 			res, err := dbApiInstance.GetEngine().QueryString(append([]interface{}{sql}, values...)...)
 			if !framework.ProcessError(err) {
