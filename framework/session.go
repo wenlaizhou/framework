@@ -31,7 +31,6 @@ func newSession(context Context) Session {
 		Name:     "sessionId",
 		Value:    id,
 		HttpOnly: true,
-		Secure:   true,
 	})
 	globalSessionLock.Lock()
 	globalSession[id] = s
