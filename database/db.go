@@ -190,7 +190,7 @@ func (this *DbApi) RegisterDbApi(orm interface{}) {
 	framework.RegisterHandler(fmt.Sprintf("/%s/insert", orm.(xorm.TableName).TableName()),
 		func(ctx framework.Context) {
 			resValue := reflect.New(ormType) //INSERT INTO .. ON DUPLICATE KEY UPDATE
-			json.Unmarshal([]byte(ctx.GetBody()), resValue.Interface())
+			json.Unmarshal(ctx.GetBody(), resValue.Interface())
 			log.Printf("%#v", resValue.Interface())
 			_, err := this.orm.Insert(resValue.Interface())
 			if err != nil {
@@ -204,7 +204,7 @@ func (this *DbApi) RegisterDbApi(orm interface{}) {
 	framework.RegisterHandler(fmt.Sprintf("/%s/update", orm.(xorm.TableName).TableName()),
 		func(ctx framework.Context) {
 			resValue := reflect.New(ormType)
-			json.Unmarshal([]byte(ctx.GetBody()), resValue.Interface())
+			json.Unmarshal(ctx.GetBody(), resValue.Interface())
 			condition := make(map[string]int)
 			condition["id"], _ = strconv.Atoi(ctx.Request.URL.Query().Get("id"))
 			_, err := this.orm.Update(resValue.Interface(), condition)
@@ -231,7 +231,7 @@ func (this *DbApi) RegisterDbApi(orm interface{}) {
 	framework.RegisterHandler(fmt.Sprintf("/%s/select", orm.(xorm.TableName).TableName()),
 		func(ctx framework.Context) {
 			resValue := reflect.New(ormType)
-			json.Unmarshal([]byte(ctx.GetBody()), resValue.Interface())
+			json.Unmarshal(ctx.GetBody(), resValue.Interface())
 			res := reflect.New(reflect.SliceOf(ormType)).Interface()
 			err := this.orm.Find(res, resValue.Interface())
 			if err != nil {
