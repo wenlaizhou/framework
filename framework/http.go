@@ -258,25 +258,25 @@ func (this *Context) GetPathParam(key string) (string) {
 	return ""
 }
 
-func (this *Context) GetBody() (string) {
+func (this *Context) GetBody() ([]byte) {
 	this.Lock()
 	defer this.Unlock()
 	if len(this.body) > 0 {
-		return string(this.body)
+		return this.body
 	}
 	data, err := ioutil.ReadAll(this.Request.Body)
 	this.body = data
 	if err == nil && len(data) > 0 {
 		this.body = data
-		return string(this.body)
+		return this.body
 	}
-	return ""
+	return nil
 }
 
 func (this *Context) GetJSON() (map[string]interface{}, error) {
 	res := make(map[string]interface{})
 	if len(this.GetBody()) > 0 {
-		err := json.Unmarshal([]byte(this.GetBody()), &res)
+		err := json.Unmarshal(this.GetBody(), &res)
 		return res, err
 	}
 	return res, nil
