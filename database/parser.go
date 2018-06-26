@@ -126,6 +126,9 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 	confParams map[string]string) (interface{}, error) {
 
 	var values []interface{}
+	if confParams == nil {
+		confParams = make(map[string]string)
+	}
 	var id = ""
 	columnsStr := ""
 	valuesStr := ""
