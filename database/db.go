@@ -43,7 +43,7 @@ import (
 	"strconv"
 	"github.com/go-xorm/core"
 	"sync"
-	"github.com/wenlaizhou/framework/framework"
+	"../framework"
 )
 
 type TableHandler struct {
