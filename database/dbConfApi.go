@@ -8,6 +8,7 @@ import (
 	"log"
 	"fmt"
 	"errors"
+	"database/sql"
 )
 
 type SqlApi struct {
@@ -139,6 +140,11 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 			if framework.ProcessError(err) {
 				framework.ProcessError(session.Rollback())
 				return result, err
+			}
+			if a, b := oneSqlRes.(sql.Result); b {
+				if id, err := a.LastInsertId(); err == nil && len(sqlInstance.Id) > 0 {
+					sqlApiParams[fmt.Sprintf("%s.id", sqlInstance.Id)] = fmt.Sprintf("%v", id)
+				}
 			}
 			if a, b := oneSqlRes.([]map[string]string); b {
 				result = append(result, a...)
