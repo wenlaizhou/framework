@@ -1,7 +1,7 @@
 package database
 
 import (
-	"../framework"
+	"github.com/wenlaizhou/framework/framework"
 	"strings"
 	"regexp"
 	"strconv"

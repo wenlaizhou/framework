@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 	"encoding/json"
-	"../framework"
+	"github.com/wenlaizhou/framework/framework"
 	"strings"
 )
 
