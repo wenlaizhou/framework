@@ -3,6 +3,10 @@
 *.iml
 *.class
 
+conf
+
+*.xml
+
 test.*
 
 ## for maven
