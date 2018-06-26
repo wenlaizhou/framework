@@ -172,7 +172,7 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 				return result, err
 			}
 			//增加id配置处理
-			sqlApi.Params[fmt.Sprintf("%s.id", sqlInstance.Id)] = fmt.Sprintf("%v", id)
+			sqlApiParams[fmt.Sprintf("%s.id", sqlInstance.Id)] = fmt.Sprintf("%v", id)
 			break
 		case "select" == sqlInstance.Type:
 			oneSqlRes, err := doSelect(*session, sqlInstance, params, sqlApiParams)

@@ -116,6 +116,8 @@ func initDbApi() {
 	case string:
 		port, _ = strconv.Atoi(v)
 		break
+	default:
+		port, _ = strconv.Atoi(fmt.Sprintf("%v", v))
 	}
 
 	dbApiInstance, err = NewDbApi(
