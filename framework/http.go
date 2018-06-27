@@ -116,7 +116,7 @@ func (this *Server) Static(path string) {
 }
 
 func RegisterStatic(path string) {
-	globalServer.RegisterHandler(path, staticProcessor)
+	globalServer.Static(path)
 }
 
 func (this *Server) RegisterTemplate(filePath string) {
