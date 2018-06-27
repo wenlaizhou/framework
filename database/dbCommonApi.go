@@ -318,7 +318,19 @@ func registerTableSelect(tableMeta core.Table, logger log.Logger) {
 	framework.RegisterHandler(fmt.Sprintf("%s/select", tableMeta.Name),
 		func(context framework.Context) {
 			params, err := context.GetJSON()
-			var values []interface{}
+			if err != nil {
+				params = nil
+			}
+			res, err := doSelect(*GetEngine().NewSession(), SqlConf{
+				Table:  tableMeta.Name,
+				HasSql: false,
+			}, params, nil)
+			if framework.ProcessError(err) {
+				context.ApiResponse(-1, err.Error(), nil)
+				return
+			}
+			context.ApiResponse(0, "", res)
+			/*var values []interface{}
 			columnsStr := ""
 			for k, v := range params {
 				if column := tableMeta.GetColumn(k); column != nil && !column.IsAutoIncrement {
@@ -380,7 +392,7 @@ func registerTableSelect(tableMeta core.Table, logger log.Logger) {
 				context.ApiResponse(-1, err.Error(), nil)
 				return
 			}
-			context.ApiResponse(0, "", res)
+			context.ApiResponse(0, "", res)*/
 			return
 		})
 }
