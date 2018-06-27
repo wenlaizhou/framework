@@ -292,7 +292,7 @@ func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 
 	tableMeta := dbApiInstance.GetMeta(sqlConf.Table)
 	if len(requestJson) <= 0 && len(confParams) <= 0 {
-		return session.QueryString(fmt.Sprintf("select * from %s", tableMeta.Name), )
+		return session.QueryString(fmt.Sprintf("select * from %s;", tableMeta.Name), )
 	}
 
 	var values []interface{}
@@ -305,8 +305,12 @@ func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 			requestJson[k] = v
 		}
 	}
+
+	orderBySql := ""
 	for k, v := range requestJson {
-		if column := tableMeta.GetColumn(k); column != nil && !column.IsAutoIncrement {
+		if column := tableMeta.GetColumn(k);
+			column != nil && !column.IsAutoIncrement {
+
 			if len(columnsStr) > 0 {
 				if realValues, ok := v.([]interface{}); ok && len(realValues) > 0 {
 					rangeStr := ""
@@ -343,14 +347,60 @@ func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 
 			continue
 		}
+		if k == "order" { //order by 处理
+			if v == nil {
+				continue
+			}
+			switch v.(type) {
+			case string:
+				orderBySql = fmt.Sprintf("%s %s %s desc", orderBySql, "order by", v.(string))
+				break
+			case map[string]interface{}:
+				/**
+				order : {
+					"key" : "asd",
+					"desc" : true | false,
+					"asc" : true | false
+				}
+				 */
+				orderBy := v.(map[string]interface{})
+				order, ok := orderBy["key"]
+				if !ok {
+					continue
+				}
+				descStr := "desc"
+				desc, ok := orderBy["desc"].(bool)
+				if ok && !desc {
+					descStr = "asc"
+				}
+				asc, ok := orderBy["asc"].(bool)
+				if ok && asc {
+					descStr = "asc"
+				}
+				orderBySql = fmt.Sprintf("%s %s %v %s", orderBySql, "order by", order, descStr)
+				break
+			}
+		}
+
+	}
+
+	// limit 处理
+	limitSql := ""
+	if start, ok := requestJson["start"]; ok {
+		limitSql = fmt.Sprintf("limit %s", start)
+		if size, ok := requestJson["size"]; ok {
+			limitSql = fmt.Sprintf("%s, %s", limitSql, size)
+		}
 	}
 
 	sql := ""
 	if len(columnsStr) <= 0 {
-		sql = fmt.Sprintf("select * from %s;", tableMeta.Name)
+		sql = fmt.Sprintf("select * from %s", tableMeta.Name)
 	} else {
-		sql = fmt.Sprintf("select * from %s where %s;", tableMeta.Name, columnsStr)
+		sql = fmt.Sprintf("select * from %s where %s", tableMeta.Name, columnsStr)
 	}
+	sql = fmt.Sprintf("%s %s %s;", sql, orderBySql, limitSql)
+
 	res, err := session.QueryString(append([]interface{}{sql}, values...)...)
 	if !framework.ProcessError(err) {
 		return res, err
