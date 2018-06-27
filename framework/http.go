@@ -409,6 +409,18 @@ func (this *Context) SessionGet(key string) interface{} {
 	return getSession(*this).Get(key)
 }
 
+// 302跳转
+func (this *Context) Redirect(path string) error {
+	this.Lock()
+	defer this.Unlock()
+	if !this.writeable {
+		return errors.New("禁止重复写入response")
+	}
+	this.writeable = false
+	http.Redirect(this.Response, this.Request, path, http.StatusFound)
+	return nil
+}
+
 func (this *Context) OK(contentType string, content []byte) error {
 	this.Lock()
 	defer this.Unlock()
@@ -445,8 +457,8 @@ func (this *Context) Error(static int, htmlStr string) error {
 	this.writeable = false
 	this.SetHeader("server", "framework")
 	this.SetHeader(ContentType, Html)
-	this.Response.Write([]byte(htmlStr))
 	this.Response.WriteHeader(static)
+	this.Response.Write([]byte(htmlStr))
 	return nil
 }
 
