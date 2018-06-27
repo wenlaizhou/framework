@@ -109,6 +109,9 @@ func (this *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (this *Server) Static(path string) {
+	if !strings.HasSuffix(path, "/") {
+		path = fmt.Sprintf("%s/", path)
+	}
 	this.RegisterHandler(path, staticProcessor)
 }
 
