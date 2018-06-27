@@ -20,6 +20,8 @@ type Server struct {
 	Port        int
 	baseTpl     *template.Template
 	pathNodes   []pathProcessor
+	index       pathProcessor
+	hasIndex    bool
 	CrossDomain bool
 	status      int
 	filter      []filterProcessor
@@ -45,6 +47,7 @@ func NewServer(host string, port int) Server {
 		Host:        host,
 		Port:        port,
 		CrossDomain: false,
+		hasIndex:    false,
 	}
 
 	srv.pathNodes = make([]pathProcessor, 0)
@@ -91,6 +94,11 @@ func (this *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if this.hasIndex && r.RequestURI == "/" {
+		this.index.handler(ctx)
+		return
+	}
+
 	for _, pathNode := range this.pathNodes {
 		if pathNode.pathReg.MatchString(r.RequestURI) {
 			pathParams := pathNode.pathReg.FindAllStringSubmatch(r.RequestURI, 10) //最多10个路径参数
@@ -106,6 +114,72 @@ func (this *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	ctx.Error(404,
+		`<!DOCTYPE html>
+<!-- saved from url=(0022)http://192.168.46.111/ -->
+<html lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+    <title>Page Not Found</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * {
+            line-height: 1.2;
+            margin: 0;
+        }
+
+        html {
+            color: #888;
+            display: table;
+            font-family: sans-serif;
+            height: 100%;
+            text-align: center;
+            width: 100%;
+        }
+
+        body {
+            display: table-cell;
+            vertical-align: middle;
+            margin: 2em auto;
+        }
+
+        h1 {
+            color: #555;
+            font-size: 2em;
+            font-weight: 400;
+        }
+
+        p {
+            margin: 0 auto;
+            width: 280px;
+        }
+
+        @media only screen and (max-width: 280px) {
+
+            body,
+            p {
+                width: 95%;
+            }
+
+            h1 {
+                font-size: 1.5em;
+                margin: 0 0 0.3em;
+            }
+
+        }
+    </style>
+</head>
+
+<body>
+    <h1>404&nbsp;NOT FOUND</h1>
+
+</body>
+
+</html>
+`)
+	return
 }
 
 func (this *Server) Static(path string) {
@@ -113,6 +187,19 @@ func (this *Server) Static(path string) {
 		path = fmt.Sprintf("%s/", path)
 	}
 	this.RegisterHandler(path, staticProcessor)
+}
+
+func (this *Server) RegisterIndex(handler func(Context)) {
+	this.Lock()
+	defer this.Unlock()
+	this.hasIndex = true
+	this.index = pathProcessor{
+		handler: handler,
+	}
+}
+
+func RegisterIndex(handler func(Context)) {
+	globalServer.RegisterIndex(handler)
 }
 
 func RegisterStatic(path string) {
@@ -345,6 +432,20 @@ func (this *Context) Code(static int) error {
 	}
 	this.writeable = false
 	this.SetHeader("server", "framework")
+	this.Response.WriteHeader(static)
+	return nil
+}
+
+func (this *Context) Error(static int, htmlStr string) error {
+	this.Lock()
+	defer this.Unlock()
+	if !this.writeable {
+		return errors.New("禁止重复写入response")
+	}
+	this.writeable = false
+	this.SetHeader("server", "framework")
+	this.SetHeader(ContentType, Html)
+	this.Response.Write([]byte(htmlStr))
 	this.Response.WriteHeader(static)
 	return nil
 }
