@@ -140,8 +140,12 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 		if sqlInstance.HasSql {
 			oneSqlRes, err := exec(*session, sqlInstance, params, sqlApiParams)
 			if framework.ProcessError(err) {
-				framework.ProcessError(session.Rollback())
-				return result, err
+				if !sqlApi.PassError {
+					if sqlApi.Transaction {
+						framework.ProcessError(session.Rollback())
+					}
+					return result, err
+				}
 			}
 			if a, b := oneSqlRes.(sql.Result); b {
 				if id, err := a.LastInsertId(); err == nil && len(sqlInstance.Id) > 0 {
@@ -170,8 +174,12 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 		case "insert" == sqlInstance.Type:
 			id, err := doInsert(*session, sqlInstance, params, sqlApiParams)
 			if framework.ProcessError(err) {
-				framework.ProcessError(session.Rollback())
-				return result, err
+				if !sqlApi.PassError {
+					if sqlApi.Transaction {
+						framework.ProcessError(session.Rollback())
+					}
+					return result, err
+				}
 			}
 			//增加id配置处理
 			sqlApiParams[fmt.Sprintf("%s.id", sqlInstance.Id)] = fmt.Sprintf("%v", id)
@@ -179,23 +187,35 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 		case "select" == sqlInstance.Type:
 			oneSqlRes, err := doSelect(*session, sqlInstance, params, sqlApiParams)
 			if framework.ProcessError(err) {
-				framework.ProcessError(session.Rollback())
-				return result, err
+				if !sqlApi.PassError {
+					if sqlApi.Transaction {
+						framework.ProcessError(session.Rollback())
+					}
+					return result, err
+				}
 			}
 			result = append(result, oneSqlRes...)
 			break
 		case "update" == sqlInstance.Type:
 			_, err := doUpdate(*session, sqlInstance, params)
 			if framework.ProcessError(err) {
-				framework.ProcessError(session.Rollback())
-				return result, err
+				if !sqlApi.PassError {
+					if sqlApi.Transaction {
+						framework.ProcessError(session.Rollback())
+					}
+					return result, err
+				}
 			}
 			break
 		case "delete" == sqlInstance.Type:
 			err := doDelete(*session, sqlInstance, params)
 			if framework.ProcessError(err) {
-				framework.ProcessError(session.Rollback())
-				return result, err
+				if !sqlApi.PassError {
+					if sqlApi.Transaction {
+						framework.ProcessError(session.Rollback())
+					}
+					return result, err
+				}
 			}
 			break
 		}
