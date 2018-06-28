@@ -186,7 +186,7 @@ func (this *Server) Static(path string) {
 	if !strings.HasSuffix(path, "/") {
 		path = fmt.Sprintf("%s/", path)
 	}
-	this.RegisterHandler(path, staticProcessor)
+	this.RegisterHandler(path, StaticProcessor)
 }
 
 func (this *Server) RegisterIndex(handler func(Context)) {
@@ -312,7 +312,7 @@ type pathProcessor struct {
 	handler func(Context)
 }
 
-func staticProcessor(ctx Context) {
+func StaticProcessor(ctx Context) {
 	//解决?参数问题
 	http.ServeFile(ctx.Response, ctx.Request, ctx.Request.URL.Path[1:])
 }
