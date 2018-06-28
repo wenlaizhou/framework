@@ -17,6 +17,7 @@ type SqlApi struct {
 	Transaction bool
 	Sqls        []SqlConf
 	Params      map[string]string
+	PassError   bool
 }
 
 type SqlConf struct {
@@ -80,6 +81,7 @@ func InitSqlConfApi(filePath string) {
 		sqlIds := make([]string, 0)
 		sqlApi := *new(SqlApi)
 		sqlApi.Transaction = apiEle.SelectAttrValue("transaction", "") == "true"
+		sqlApi.PassError = apiEle.SelectAttrValue("passError", "") == "true"
 		sqlApi.Path = apiEle.SelectAttrValue("path", "")
 		sqlApi.Sqls = make([]SqlConf, 0)
 		sqlApi.Params = make(map[string]string)
