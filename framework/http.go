@@ -524,3 +524,16 @@ func (this *Context) ApiResponse(code int, message string, data interface{}) err
 func (this *Context) RemoteAddr() string {
 	return this.Request.RemoteAddr
 }
+
+/*
+http文件服务
+ */
+func (this *Context) ServeFile(filePath string) {
+	this.Lock()
+	defer this.Unlock()
+	if !this.writeable {
+		return
+	}
+	http.ServeFile(this.Response, this.Request, filePath)
+	this.writeable = false
+}
