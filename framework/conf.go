@@ -42,7 +42,7 @@ const ConfDir = "CONF_DIR"
 
 type Config map[string]interface{}
 
-func LoadConfig(confPath string) *Config {
+func LoadConfig(confPath string) Config {
 	res := make(Config)
 	if !Exists(confPath) {
 		return nil
@@ -53,5 +53,5 @@ func LoadConfig(confPath string) *Config {
 	}
 	json.Unmarshal(data, &res)
 	res[ConfDir] = filepath.Dir(confPath)
-	return &res
+	return res
 }
