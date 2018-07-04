@@ -17,7 +17,8 @@ type SqlApi struct {
 	Transaction bool
 	Sqls        []SqlConf
 	Params      map[string]string
-	PassError   bool
+	PassError   bool     //是否忽略错误, 多条sql语句时, 当其中一条出错, 会终止之后的执行
+	Must        []string //必须不为空的参数列表, 使用,分割 例如: <must>asd,ads,das</must>
 }
 
 type SqlConf struct {
@@ -83,11 +84,14 @@ func InitSqlConfApi(filePath string) {
 		sqlApi.Transaction = apiEle.SelectAttrValue("transaction", "") == "true"
 		sqlApi.PassError = apiEle.SelectAttrValue("passError", "") == "true"
 		sqlApi.Path = apiEle.SelectAttrValue("path", "")
+
 		sqlApi.Sqls = make([]SqlConf, 0)
+
 		sqlApi.Params = make(map[string]string)
 		for _, paramEle := range apiEle.FindElements(".//param") {
 			sqlApi.Params[paramEle.SelectAttrValue("key", "")] = paramEle.SelectAttrValue("value", "")
 		}
+
 		for i, sqlEle := range apiEle.FindElements(".//sql") {
 			oneSql := new(SqlConf)
 			oneSql.Table = sqlEle.SelectAttrValue("table", "")
@@ -107,6 +111,18 @@ func InitSqlConfApi(filePath string) {
 			}
 			sqlApi.Sqls = append(sqlApi.Sqls, *oneSql)
 		}
+
+		for _, mustEle := range apiEle.FindElements(".//must") {
+			mustContent := mustEle.Text()
+			if len(mustContent) > 0 && len(strings.TrimSpace(mustContent)) > 0 {
+				mustContent = strings.TrimSpace(mustContent)
+				mustParams := strings.Split(mustContent, ",")
+				for _, mustParam := range mustParams {
+					sqlApi.Must = append(sqlApi.Must, mustParam)
+				}
+			}
+		}
+
 		//注册每个配置对应的接口服务
 		sqlApis[sqlApi.Path] = sqlApi
 		registerSqlConfApi(sqlApi)
@@ -120,6 +136,10 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 	if !ok {
 		return nil, errors.New("没有该路径sqlApi配置")
 	}
+
+	//必须具有参数列表
+
+	//<must>asd, asd, asd, asd</must>
 
 	//处理guid
 	for k, v := range sqlApi.Params {
@@ -246,6 +266,19 @@ func registerSqlConfApi(sqlApi SqlApi) {
 			}
 			log.Printf("sql-api 获取调用: %s", sqlApi.Path)
 			log.Printf("参数: %v", jsonData)
+			if len(sqlApi.Must) > 0 {
+				for _, mustParam := range sqlApi.Must {
+					if v, ok := jsonData[mustParam]; !ok {
+						context.ApiResponse(-1, fmt.Sprintf("%s为必须参数", mustParam), nil)
+						return
+					} else {
+						if v == nil {
+							context.ApiResponse(-1, fmt.Sprintf("%s为必须参数", mustParam), nil)
+							return
+						}
+					}
+				}
+			}
 			res, err := ExecSqlConfApi(jsonData, sqlApi.Path)
 			if framework.ProcessError(err) {
 				context.ApiResponse(-1, err.Error(), nil)
