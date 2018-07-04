@@ -18,7 +18,10 @@ var Config framework.Config
 
 var inited = false
 
-// 初始化数据库连接	, 配置:
+// 初始化数据库连接
+// 调用该方法可重复更新配置, 重新创建连接
+// 
+// 配置:
 // {
 //	enableDbApi
 // 	db.host
@@ -148,76 +151,6 @@ func registerTableInsert(tableMeta core.Table, logger log.Logger) {
 				return
 			}
 			context.ApiResponse(0, "", id)
-			//var values []interface{}
-			//var id = ""
-			//columnsStr := ""
-			//valuesStr := ""
-			//for k, v := range params {
-			//	if column := tableMeta.GetColumn(k);
-			//		column != nil && !column.IsAutoIncrement {
-			//		if column.Name == "create_time" || column.Name == "update_time" {
-			//			continue
-			//		}
-			//		if len(columnsStr) > 0 {
-			//			columnsStr = fmt.Sprintf("%s, %s", columnsStr, column.Name)
-			//		} else {
-			//			columnsStr = column.Name
-			//		}
-			//		if len(valuesStr) > 0 {
-			//			valuesStr = fmt.Sprintf("%s, ?", valuesStr)
-			//		} else {
-			//			valuesStr = "?"
-			//		}
-			//		values = append(values, v)
-			//		continue
-			//	}
-			//}
-			////处理is_delete
-			//if isDelete := tableMeta.GetColumn("is_delete"); isDelete != nil {
-			//	if len(columnsStr) > 0 {
-			//		columnsStr = fmt.Sprintf("%s, %s", columnsStr, isDelete.Name)
-			//	} else {
-			//		columnsStr = isDelete.Name
-			//	}
-			//	if len(valuesStr) > 0 {
-			//		valuesStr = fmt.Sprintf("%s, 0", valuesStr)
-			//	} else {
-			//		valuesStr = "0"
-			//	}
-			//}
-			//primaryKey := tableMeta.GetColumn(tableMeta.PrimaryKeys[0]) // 限制单一主键
-			////32位guid
-			//if primaryKey != nil && !primaryKey.IsAutoIncrement {
-			//	columnsStr = fmt.Sprintf("%s, %s", columnsStr, primaryKey.Name)
-			//	valuesStr = fmt.Sprintf("%s, ?", valuesStr)
-			//	id = framework.Guid()
-			//	values = append(values, id)
-			//}
-			//if createColumn := tableMeta.GetColumn("create_time"); createColumn != nil {
-			//	columnsStr = fmt.Sprintf("%s, %s", columnsStr, createColumn.Name)
-			//	valuesStr = fmt.Sprintf("%s, %s", valuesStr, "now()")
-			//}
-			//if updateColumn := tableMeta.GetColumn("update_time"); updateColumn != nil {
-			//	columnsStr = fmt.Sprintf("%s, %s", columnsStr, updateColumn.Name)
-			//	valuesStr = fmt.Sprintf("%s, %s", valuesStr, "now()")
-			//}
-			//sql := fmt.Sprintf("insert into %s (%s) values (%s);", tableMeta.Name, columnsStr, valuesStr)
-			//res, err := dbApiInstance.GetEngine().Exec(sql, values...)
-			//if !framework.ProcessError(err) {
-			//	//记录日志
-			//	logSql(logger, context, sql, values)
-			//	//查询并写入es
-			//	lastId, err := res.LastInsertId()
-			//	framework.ProcessError(err)
-			//	if len(id) > 0 {
-			//		context.ApiResponse(0, "success", id)
-			//	} else {
-			//		context.ApiResponse(0, "success", lastId)
-			//	}
-			//} else {
-			//	context.ApiResponse(-1, err.Error(), nil)
-			//}
-
 		})
 }
 
@@ -330,69 +263,6 @@ func registerTableSelect(tableMeta core.Table, logger log.Logger) {
 				return
 			}
 			context.ApiResponse(0, "", res)
-			/*var values []interface{}
-			columnsStr := ""
-			for k, v := range params {
-				if column := tableMeta.GetColumn(k); column != nil && !column.IsAutoIncrement {
-					if len(columnsStr) > 0 {
-						if realValues, ok := v.([]interface{}); ok && len(realValues) > 0 {
-							rangeStr := ""
-							for range realValues {
-								rangeStr = fmt.Sprintf("%s, ?", rangeStr)
-							}
-							columnsStr = fmt.Sprintf("%s and %s in (%s)", columnsStr, column.Name, rangeStr[1:])
-							values = append(values, realValues...)
-
-						} else {
-							if v != nil {
-								columnsStr = fmt.Sprintf("%s and %s = ?", columnsStr, column.Name)
-								values = append(values, v)
-							}
-						}
-
-					} else {
-						if realValues, ok := v.([]interface{}); ok && len(realValues) > 0 {
-							rangeStr := ""
-							for range realValues {
-								rangeStr = fmt.Sprintf("%s, ?", rangeStr)
-							}
-							columnsStr = fmt.Sprintf("%s in (%s)", column.Name, rangeStr[1:])
-							values = append(values, realValues...)
-
-						} else {
-							if v != nil {
-								columnsStr = fmt.Sprintf("%s = ?", column.Name)
-								values = append(values, v)
-							}
-						}
-
-					}
-
-					continue
-				}
-			}
-
-			sql := ""
-			if len(columnsStr) <= 0 {
-				sql = fmt.Sprintf("select * from %s", tableMeta.Name)
-			} else {
-				sql = fmt.Sprintf("select * from %s where %s", tableMeta.Name, columnsStr)
-			}
-			//分页
-			if start, ok := params["start"]; ok {
-				if size, ok := params["size"]; ok {
-					sql = fmt.Sprintf("%s limit %v, %v;", sql, start, size)
-				}
-			}
-			res, err := dbApiInstance.GetEngine().QueryString(append([]interface{}{sql}, values...)...)
-			if !framework.ProcessError(err) {
-				logSql(logger, context, sql, values)
-			}
-			if err != nil {
-				context.ApiResponse(-1, err.Error(), nil)
-				return
-			}
-			context.ApiResponse(0, "", res)*/
 			return
 		})
 }

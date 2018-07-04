@@ -90,6 +90,9 @@ func NewDbApi(host string,
 		return nil, err
 	}
 	orm.ShowSQL(true)
+	if res.orm != nil {
+		res.orm.Close()
+	}
 	res.orm = orm
 	return res, nil
 }
@@ -99,9 +102,6 @@ func initDbApi() {
 	dbApiInstanceLock.Lock()
 	defer dbApiInstanceLock.Unlock()
 
-	if dbApiInstance != nil {
-		return
-	}
 	var err error
 
 	//类型判断

@@ -19,7 +19,7 @@ type Server struct {
 	Host        string
 	Port        int
 	baseTpl     *template.Template
-	pathNodes   []pathProcessor
+	pathNodes   map[string]pathProcessor
 	index       pathProcessor
 	hasIndex    bool
 	CrossDomain bool
@@ -50,7 +50,7 @@ func NewServer(host string, port int) Server {
 		hasIndex:    false,
 	}
 
-	srv.pathNodes = make([]pathProcessor, 0)
+	srv.pathNodes = make(map[string]pathProcessor)
 	return srv
 }
 
@@ -291,11 +291,11 @@ func (this *Server) RegisterHandler(path string, handler func(Context)) {
 	pathReg, err := regexp.Compile(path)
 	log.Printf(fmt.Sprintf("注册handler: %s", path))
 	if !ProcessError(err) {
-		this.pathNodes = append(this.pathNodes, pathProcessor{
+		this.pathNodes[path] = pathProcessor{
 			pathReg: pathReg,
 			handler: handler,
 			params:  params,
-		})
+		}
 	}
 }
 

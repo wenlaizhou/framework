@@ -74,6 +74,8 @@ var sqlApis = make(map[string]SqlApi)
 
 // 初始化数据库api配置
 //
+// 可重复更新配置
+//
 // 配置文件路径
 func InitSqlConfApi(filePath string) {
 	apiConf := framework.LoadXml(filePath)
