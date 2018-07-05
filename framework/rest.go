@@ -7,6 +7,7 @@ type apiDesc struct {
 	paramDesc  string
 	resultDesc string
 	desc       string
+	method     string
 }
 
 func apiProcessor(context Context) {
@@ -24,6 +25,7 @@ func init() {
 //异常说明
 func (this *Server) RegisterApi(
 	path string,
+	method string,
 	paramDesc string,
 	resultDesc string,
 	desc string,
@@ -37,6 +39,7 @@ func (this *Server) RegisterApi(
 
 	apiList[path] = apiDesc{
 		path:       path,
+		method:     method,
 		desc:       desc,
 		paramDesc:  paramDesc,
 		resultDesc: resultDesc,
@@ -46,12 +49,14 @@ func (this *Server) RegisterApi(
 }
 
 func RegisterApi(path string,
+	method string,
 	paramDesc string,
 	resultDesc string,
 	desc string,
 	handler func(context Context)) {
 	globalServer.RegisterApi(
 		path,
+		method,
 		paramDesc,
 		resultDesc,
 		desc,
