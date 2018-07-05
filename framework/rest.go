@@ -14,6 +14,10 @@ func apiProcessor(context Context) {
 	return
 }
 
+func init() {
+	RegisterHandler("api", apiProcessor)
+}
+
 //参数列表,
 //返回值说明,
 //接口描述,
@@ -39,4 +43,17 @@ func (this *Server) RegisterApi(
 	}
 
 	return
+}
+
+func RegisterApi(path string,
+	paramDesc string,
+	resultDesc string,
+	desc string,
+	handler func(context Context)) {
+	globalServer.RegisterApi(
+		path,
+		paramDesc,
+		resultDesc,
+		desc,
+		handler)
 }
