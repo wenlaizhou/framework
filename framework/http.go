@@ -272,6 +272,9 @@ func (this *Server) RegisterHandler(path string, handler func(Context)) {
 	if len(path) <= 0 {
 		return
 	}
+	if handler == nil {
+		return
+	}
 	if strings.HasSuffix(path, "/") {
 		path = fmt.Sprintf("%s.*", path)
 	} else {
