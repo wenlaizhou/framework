@@ -40,13 +40,15 @@ func (this *Server) RegisterApi(
 	params []ApiParam,
 	result ApiResult,
 	desc string,
-	handler func(context Context)) {
+	handler func(context Context) (code int, message string, data interface{})) {
 
 	if len(path) < 0 || handler == nil {
 		return
 	}
 
-	this.RegisterHandler(path, handler)
+	this.RegisterHandler(path, func(context Context) {
+		context.ApiResponse(handler(context))
+	})
 
 	apiList[path] = ApiDesc{
 		Path:   path,
@@ -64,7 +66,7 @@ func RegisterApi(path string,
 	params []ApiParam,
 	result ApiResult,
 	desc string,
-	handler func(context Context)) {
+	handler func(context Context) (code int, message string, data interface{})) {
 	globalServer.RegisterApi(
 		path,
 		method,
@@ -73,3 +75,7 @@ func RegisterApi(path string,
 		desc,
 		handler)
 }
+
+//直接注册带界面api:
+//1. 使用accept进行界面或json区分
+//2. 调用权限区分
