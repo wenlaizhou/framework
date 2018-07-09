@@ -142,6 +142,7 @@ func registerTableInsert(tableMeta core.Table, logger log.Logger) {
 				context.ApiResponse(-1, "参数错误", nil)
 				return
 			}
+			logger.Printf("获取insert调用: %v", params)
 			id, err := doInsert(*GetEngine().NewSession(), SqlConf{
 				Id:    tableMeta.Name,
 				Table: tableMeta.Name,
@@ -171,6 +172,7 @@ func registerTableDelete(tableMeta core.Table, logger log.Logger) {
 				context.ApiResponse(-1, "表不存在主键, 无法删除数据", nil)
 				return
 			}
+			logger.Printf("获取delete调用: %v", params)
 			primaryKey := tableMeta.PrimaryKeys[0]
 			sql := fmt.Sprintf("delete from %s where %s = ?;", tableMeta.Name, primaryKey)
 			res, err := dbApiInstance.GetEngine().Exec(sql, primaryValue)
@@ -208,6 +210,7 @@ func registerTableUpdate(tableMeta core.Table, logger log.Logger) {
 				context.ApiResponse(-1, "表不存在主键, 无法更新", nil)
 				return
 			}
+			logger.Printf("获取update调用: %v", params)
 			var values []interface{}
 			columnsStr := ""
 			for k, v := range params {
@@ -254,6 +257,7 @@ func registerTableSelect(tableMeta core.Table, logger log.Logger) {
 			if err != nil {
 				params = nil
 			}
+			logger.Printf("获取select调用: %v", params)
 			res, err := doSelect(*GetEngine().NewSession(), SqlConf{
 				Table:  tableMeta.Name,
 				HasSql: false,
