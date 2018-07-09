@@ -22,7 +22,7 @@ const sniffLen = 512
 // if modtime.IsZero(), modtime is unknown.
 // content must be seeked to the beginning of the file.
 // The sizeFunc is called at most once. Its error, if any, is sent in the HTTP response.
-func serveContent(context Context, name string, modtime time.Time, sizeFunc func() (int64, error), content io.ReadSeeker) {
+func serveContent(context Context, name string, modtime time.Time, size int64, content io.ReadSeeker) {
 	setLastModified(context, modtime)
 	done, rangeReq := checkPreconditions(context, modtime)
 	if done {
@@ -53,14 +53,6 @@ func serveContent(context Context, name string, modtime time.Time, sizeFunc func
 		context.SetHeader("Content-Type", ctype)
 	} else if len(ctypes) > 0 {
 		ctype = ctypes[0]
-	}
-
-	size, err := sizeFunc()
-	if err != nil {
-		context.Error(StatusInternalServerError,
-			fmt.Sprintf(StatusErrorTemp,
-				StatusInternalServerError, err.Error()))
-		return
 	}
 
 	// handle Content-Range header.
@@ -180,8 +172,7 @@ func FileProcessor(context Context) {
 	}
 
 	// serveContent will check modification time
-	sizeFunc := func() (int64, error) { return d.Size(), nil }
-	serveContent(context, d.Name(), d.ModTime(), sizeFunc, f)
+	serveContent(context, d.Name(), d.ModTime(), d.Size(), f)
 }
 
 // toHTTPError returns a non-specific HTTP error message and status code
