@@ -152,7 +152,12 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 					v = confValue
 				}
 			}
-			values = append(values, v)
+			if str, ok := v.(string); ok {
+				str = strings.TrimSpace(str)
+				values = append(values, str)
+			} else {
+				values = append(values, v)
+			}
 			continue
 		}
 	}
@@ -269,7 +274,12 @@ func doUpdate(session xorm.Session, sqlConf SqlConf,
 			} else {
 				columnsStr = fmt.Sprintf("%s = ?", column.Name)
 			}
-			values = append(values, v)
+			if str, ok := v.(string); ok {
+				str = strings.TrimSpace(str)
+				values = append(values, str)
+			} else {
+				values = append(values, v)
+			}
 			continue
 		}
 	}
