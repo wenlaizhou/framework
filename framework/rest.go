@@ -1,13 +1,24 @@
 package framework
 
-var apiList = make(map[string]apiDesc)
+var apiList = make(map[string]ApiDesc)
 
-type apiDesc struct {
-	path       string
-	paramDesc  string
-	resultDesc string
-	desc       string
-	method     string
+type ApiDesc struct {
+	Path   string
+	Params []ApiParam
+	Result ApiResult
+	Desc   string
+	Method string
+}
+
+type ApiParam struct {
+	Name string
+	Desc string
+	Type string
+}
+
+type ApiResult struct {
+	Type string
+	Desc string
 }
 
 func apiProcessor(context Context) {
@@ -26,8 +37,8 @@ func init() {
 func (this *Server) RegisterApi(
 	path string,
 	method string,
-	paramDesc string,
-	resultDesc string,
+	params []ApiParam,
+	result ApiResult,
 	desc string,
 	handler func(context Context)) {
 
@@ -37,12 +48,12 @@ func (this *Server) RegisterApi(
 
 	this.RegisterHandler(path, handler)
 
-	apiList[path] = apiDesc{
-		path:       path,
-		method:     method,
-		desc:       desc,
-		paramDesc:  paramDesc,
-		resultDesc: resultDesc,
+	apiList[path] = ApiDesc{
+		Path:   path,
+		Method: method,
+		Desc:   desc,
+		Params: params,
+		Result: result,
 	}
 
 	return
@@ -50,15 +61,15 @@ func (this *Server) RegisterApi(
 
 func RegisterApi(path string,
 	method string,
-	paramDesc string,
-	resultDesc string,
+	params []ApiParam,
+	result ApiResult,
 	desc string,
 	handler func(context Context)) {
 	globalServer.RegisterApi(
 		path,
 		method,
-		paramDesc,
-		resultDesc,
+		params,
+		result,
 		desc,
 		handler)
 }

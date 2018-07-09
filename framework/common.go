@@ -70,7 +70,7 @@ const (
 	ContentRange        = "Content-Range"
 	CookieExpires       = "expires"
 	CookieDomain        = "domain"
-	CookiePath          = "path"
+	CookiePath          = "Path"
 	CookieHTTPOnly      = "HttpOnly"
 	CookieSecure        = "secure"
 	HttpClose           = "close"

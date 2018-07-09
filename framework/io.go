@@ -10,7 +10,7 @@ import (
 	"io/ioutil"
 )
 
-// SelfPath gets compiled executable file absolute path
+// SelfPath gets compiled executable file absolute Path
 func SelfPath() string {
 	selfPath, _ := filepath.Abs(os.Args[0])
 	return selfPath
@@ -106,7 +106,7 @@ func Rename(src string, target string) error {
 	return os.Rename(src, target)
 }
 
-// IsFile checks whether the path is a file,
+// IsFile checks whether the Path is a file,
 // it returns false when it's a directory or does not exist.
 func IsFile(fp string) bool {
 	f, e := os.Stat(fp)
