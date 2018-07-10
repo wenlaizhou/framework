@@ -279,6 +279,9 @@ type Context struct {
 	sync.RWMutex
 }
 
+/*
+获取路径参数, /{参数名称}
+ */
 func (this *Context) GetPathParam(key string) (string) {
 	value, ok := this.pathParams[key]
 	if ok {
