@@ -200,58 +200,17 @@ func registerTableUpdate(tableMeta core.Table, logger log.Logger) {
 				context.ApiResponse(-1, "参数错误", nil)
 				return
 			}
-			primaryValue, ok := params["id"]
-			if !ok || primaryValue == nil {
-				context.ApiResponse(-1, "修改数据必须指定id值", nil)
-				return
-			}
-			primaryKey := tableMeta.PrimaryKeys[0]
-			if len(tableMeta.PrimaryKeys) <= 0 {
-				context.ApiResponse(-1, "表不存在主键, 无法更新", nil)
-				return
-			}
 			logger.Printf("获取update调用: %v", params)
-			var values []interface{}
-			columnsStr := ""
-			for k, v := range params {
-				if column := tableMeta.GetColumn(k);
-					column != nil && !column.IsAutoIncrement {
-					if column.Name == "create_time" || column.Name == "update_time" {
-						continue
-					}
-					if len(columnsStr) > 0 {
-						columnsStr = fmt.Sprintf("%s, %s = ?", columnsStr, column.Name)
-					} else {
-						columnsStr = fmt.Sprintf("%s = ?", column.Name)
-					}
-					if str, ok := v.(string); ok {
-						str = strings.TrimSpace(str)
-						values = append(values, str)
-					} else {
-						values = append(values, v)
-					}
-					continue
-				}
-			}
-			if updateColumn := tableMeta.GetColumn("update_time"); updateColumn != nil {
-				columnsStr = fmt.Sprintf("%s, %s=now()", columnsStr, updateColumn.Name)
-			}
-			sql := fmt.Sprintf("update %s set %s where %s = ?;", tableMeta.Name,
-				columnsStr, primaryKey)
-			values = append(values, primaryValue)
-			res, err := dbApiInstance.GetEngine().Exec(sql, values...)
-			if !framework.ProcessError(err) {
-				logSql(logger, context, sql, values)
-				rowsAffected, err := res.RowsAffected()
-				if !framework.ProcessError(err) && rowsAffected == 1 {
-					context.ApiResponse(0, "success", rowsAffected)
-					return
-				}
-			}
+			res, err := doUpdate(*GetEngine().NewSession(), SqlConf{
+				Table: tableMeta.Name,
+			}, params)
 			if err != nil {
 				context.ApiResponse(-1, err.Error(), nil)
+				return
+			} else {
+				context.ApiResponse(0, "success", res)
+				return
 			}
-			context.ApiResponse(-1, "", nil)
 		})
 }
 
