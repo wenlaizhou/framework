@@ -224,6 +224,12 @@ func registerTableUpdate(tableMeta core.Table, logger log.Logger) {
 					} else {
 						columnsStr = fmt.Sprintf("%s = ?", column.Name)
 					}
+					if str, ok := v.(string); ok {
+						str = strings.TrimSpace(str)
+						values = append(values, str)
+					} else {
+						values = append(values, v)
+					}
 					values = append(values, v)
 					continue
 				}
