@@ -144,7 +144,6 @@ func StatusText(code int) string {
 }
 
 var StatusErrorTemp = `<!DOCTYPE html>
-<!-- saved from url=(0022)http://192.168.46.111/ -->
 <html lang="en">
 
 <head>
@@ -162,9 +161,9 @@ var StatusErrorTemp = `<!DOCTYPE html>
             color: #888;
             display: table;
             font-family: sans-serif;
-            height: 100%;
+            height: 100%%;
             text-align: center;
-            width: 100%;
+            width: 100%%;
         }
 
         body {
@@ -188,7 +187,7 @@ var StatusErrorTemp = `<!DOCTYPE html>
 
             body,
             p {
-                width: 95%;
+                width: 95%%;
             }
 
             h1 {
@@ -201,7 +200,7 @@ var StatusErrorTemp = `<!DOCTYPE html>
 </head>
 
 <body>
-    <h1>%v&nbsp;%v</h1>
+    <h1> %v &nbsp; %v </h1>
 
 </body>
 
