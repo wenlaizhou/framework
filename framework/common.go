@@ -109,4 +109,5 @@ const (
 	AccessControlAllowMethods = "Access-Control-Allow-Methods"
 	AccessControlAllowHeaders = "Access-Control-Allow-Headers"
 	METHODS                   = "POST,GET,OPTIONS,DELETE"
+
 )
