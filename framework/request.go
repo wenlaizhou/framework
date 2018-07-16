@@ -7,24 +7,38 @@ import (
 	"encoding/json"
 )
 
+//Post: post data to url
+//
+//return : statusCode, header, body, error
 func Post(url string, headers map[string]string, data []byte) (int, map[string][]string, []byte, error) {
-	return doRequest(POST, url, headers, "", data)
+	return DoRequest(POST, url, headers, "", data)
 }
 
+//PostJson: post json data to url, contentType设置为: application/json utf8
+//
+//data : interface, 自动将其转成json格式
+//
+//return : statusCode, header, body, error
 func PostJson(url string, headers map[string]string, data interface{}) (int, map[string][]string, []byte, error) {
 	if data != nil {
 		dataJson, _ := json.Marshal(data)
-		return doRequest(POST, url, headers, ApplicationJson, dataJson)
+		return DoRequest(POST, url, headers, ApplicationJson, dataJson)
 	}
-	return doRequest(POST, url, headers, ApplicationJson, nil)
+	return DoRequest(POST, url, headers, ApplicationJson, nil)
 }
 
+//Get: get data from url
+//
+//return : statusCode, header, body, error
 func Get(url string, headers map[string]string) (int, map[string][]string, []byte, error) {
 
-	return doRequest(GET, url, headers, "", nil)
+	return DoRequest(GET, url, headers, "", nil)
 }
 
-func doRequest(method string, url string,
+//DoRequest: post data to url
+//
+//return : statusCode, header, body, error
+func DoRequest(method string, url string,
 	headers map[string]string, contentType string,
 	body []byte) (int, map[string][]string, []byte, error) {
 
