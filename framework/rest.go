@@ -1,5 +1,7 @@
 package framework
 
+import "fmt"
+
 var apiList = make(map[string]ApiDesc)
 
 type ApiDesc struct {
@@ -47,6 +49,10 @@ func (this *Server) RegisterApi(
 	}
 
 	this.RegisterHandler(path, func(context Context) {
+		if context.GetMethod() != method {
+			context.Error(405, fmt.Sprintf(StatusErrorTemp, "Method Not Allowed"))
+			return
+		}
 		context.ApiResponse(handler(context))
 	})
 
