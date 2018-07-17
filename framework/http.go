@@ -220,6 +220,10 @@ func (this *Server) RegisterHandler(path string, handler func(Context)) {
 		path = fmt.Sprintf("%s$", path)
 	}
 
+	if !strings.HasPrefix(path, "/") {
+		path = fmt.Sprintf("/%s", path)
+	}
+
 	paramMather := pathParamReg.FindAllStringSubmatch(path, -1)
 
 	var params []string
