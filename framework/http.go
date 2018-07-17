@@ -202,6 +202,9 @@ func RegisterHandler(path string, handler func(Context)) {
 	globalServer.RegisterHandler(path, handler)
 }
 
+/*
+注册handler时, 有prefix扰乱
+ */
 func (this *Server) RegisterHandler(path string, handler func(Context)) {
 	this.Lock()
 	defer this.Unlock()
