@@ -97,7 +97,7 @@ func exec(session xorm.Session, sqlConf SqlConf,
 		return session.QueryString(append([]interface{}{sql}, variable...)...)
 
 	} else {
-		return session.Exec(sql, variable...)
+		return session.Exec(append([]interface{}{sql}, variable...)...)
 	}
 }
 
@@ -119,4 +119,3 @@ func appendValueStr(valuesStr string) string {
 		return "?"
 	}
 }
-
