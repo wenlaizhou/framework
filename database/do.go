@@ -93,8 +93,7 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 		}
 	}
 	sql := fmt.Sprintf("insert into %s (%s) values (%s);", tableMeta.Name, columnsStr, valuesStr)
-
-	res, err := session.Exec(sql, values...)
+	res, err := session.Exec(append([]interface{}{sql}, values...)...)
 	if framework.ProcessError(err) {
 		return nil, err
 	}
@@ -175,7 +174,7 @@ func doUpdate(session xorm.Session, sqlConf SqlConf,
 	sql := fmt.Sprintf("update %s set %s where %s = ?;", tableMeta.Name,
 		columnsStr, primaryKey)
 	values = append(values, primaryValue)
-	res, err := session.Exec(sql, values...)
+	res, err := session.Exec(append([]interface{}{sql}, values...)...)
 	if !framework.ProcessError(err) {
 		return -1, err
 	} else {
