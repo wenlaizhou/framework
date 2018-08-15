@@ -133,6 +133,7 @@ func registerTableCommonApi(tableMeta core.Table) {
 	registerTableUpdate(tableMeta, *logger)
 	registerTableSelect(tableMeta, *logger)
 	registerTableDelete(tableMeta, *logger)
+	registerTableCount(tableMeta, *logger)
 	registerTableSchema(tableMeta)
 }
 
@@ -225,6 +226,27 @@ func registerTableSelect(tableMeta core.Table, logger log.Logger) {
 			}
 			logger.Printf("获取select调用: %v", params)
 			res, err := doSelect(*GetEngine().NewSession(), SqlConf{
+				Table:  tableMeta.Name,
+				HasSql: false,
+			}, params, nil)
+			if framework.ProcessError(err) {
+				context.ApiResponse(-1, err.Error(), nil)
+				return
+			}
+			context.ApiResponse(0, "", res)
+			return
+		})
+}
+
+func registerTableCount(tableMeta core.Table, logger log.Logger) {
+	framework.RegisterHandler(fmt.Sprintf("%s/count", tableMeta.Name),
+		func(context framework.Context) {
+			params, err := context.GetJSON()
+			if err != nil {
+				params = nil
+			}
+			logger.Printf("获取select调用: %v", params)
+			res, err := doCount(*GetEngine().NewSession(), SqlConf{
 				Table:  tableMeta.Name,
 				HasSql: false,
 			}, params, nil)
