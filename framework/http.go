@@ -100,7 +100,7 @@ func (this *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, pathNode := range this.pathNodes {
-		if pathNode.pathReg.MatchString(r.RequestURI) {
+		if pathNode.pathReg.MatchString(r.URL.Path) {
 			pathParams := pathNode.pathReg.FindAllStringSubmatch(r.RequestURI, 10) //最多10个路径参数
 			if len(pathParams) > 0 && len(pathParams[0]) > 0 {
 				for i, pathParam := range pathParams[0][1:] {
