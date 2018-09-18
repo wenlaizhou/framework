@@ -289,7 +289,7 @@ type Context struct {
 /*
 获取路径参数, /{参数名称}
  */
-func (this *Context) GetPathParam(key string) (string) {
+func (this *Context) GetPathParam(key string) string {
 	value, ok := this.pathParams[key]
 	if ok {
 		return value
@@ -319,6 +319,13 @@ func (this *Context) GetJSON() (map[string]interface{}, error) {
 		return res, err
 	}
 	return res, nil
+}
+
+/*
+获取query参数
+ */
+func (this *Context) GetQueryParam(key string) string {
+	return this.Request.URL.Query().Get(key)
 }
 
 func (this *Context) WriteJSON(data interface{}) error {
